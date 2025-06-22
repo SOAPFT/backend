@@ -14,9 +14,7 @@ import { HttpLoggerMiddleware } from './middlewares/http-logger.middleware';
 import { CommentsModule } from './modules/comments/comments.module';
 import { LikesModule } from './modules/likes/likes.module';
 import { UsersModule } from './modules/users/users.module';
-import { GroupModule } from './modules/group/group.module';
-import { StatisticsModule } from './modules/statistics/statistics.module';
-
+import { ChallengeModule } from './modules/challenges/challenge.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,8 +35,7 @@ import { StatisticsModule } from './modules/statistics/statistics.module';
     CommentsModule,
     LikesModule,
     UsersModule,
-    GroupModule,
-    StatisticsModule,
+    ChallengeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

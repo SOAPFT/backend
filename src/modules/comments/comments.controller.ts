@@ -15,12 +15,12 @@ import {
   ApiGetAllComments,
   ApiGetComment,
   ApiUpdateComment,
-} from '@/decorators/swagger.decorator';
+  ApiDeleteComment,
+} from './decorators/comments.swagger';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { FindAllCommentsDto } from './dto/find-all-comments.dto';
-import { ApiDeleteComment } from '@/decorators/swagger.decorator';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
 
@@ -43,27 +43,23 @@ export class CommentsController {
     @Body() createCommentDto: CreateCommentDto,
     @UserUuid() userUuid: string,
   ) {
-    return this.commentsService.createComment(createCommentDto, userUuid);
+    return null;
   }
 
   /**
    * 게시글의 모든 댓글 조회
-   * @param postId 게시글 ID
+   * @param postUuid 게시글 ULID
    * @param findAllCommentsDto 댓글 목록 조회 조건들
    * @returns 댓글 목록과 페이지네이션 메타데이터
    */
-  @Get('post/:postId')
+  @Get('post/:postUuid')
   @ApiGetAllComments()
   findAllComments(
-    @Param('postId') postId: string,
+    @Param('postUuid') postUuid: string,
     @Query() findAllCommentsDto: FindAllCommentsDto,
     @UserUuid() userUuid: string,
   ) {
-    return this.commentsService.findAllComments(
-      +postId,
-      findAllCommentsDto,
-      userUuid,
-    );
+    return null;
   }
 
   /**
@@ -77,7 +73,7 @@ export class CommentsController {
     @Param('commentId') commentId: string,
     @UserUuid() userUuid: string,
   ) {
-    return this.commentsService.findOneComment(+commentId, userUuid);
+    return null;
   }
 
   /**
@@ -94,11 +90,7 @@ export class CommentsController {
     @Body() updateCommentDto: UpdateCommentDto,
     @UserUuid() userUuid: string,
   ) {
-    return this.commentsService.updateComment(
-      +commentId,
-      updateCommentDto,
-      userUuid,
-    );
+    return null;
   }
 
   /**
@@ -113,6 +105,6 @@ export class CommentsController {
     @Param('commentId') commentId: string,
     @UserUuid() userUuid: string,
   ) {
-    return this.commentsService.removeComment(+commentId, userUuid);
+    return null;
   }
 }

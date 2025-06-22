@@ -16,7 +16,7 @@ import { UploadResponseDto } from './dto/upload-response.dto';
 import { DeleteResponseDto } from './dto/delete-response.dto';
 import { DeleteImageParamDto } from './dto/delete-image-param.dto';
 import { ImageFileInterceptor } from '@/decorators/file-interceptor.decorator';
-import { ApiDeleteImage, ApiUploadImage } from '@/decorators/swagger.decorator';
+import { ApiDeleteImage, ApiUploadImage } from './decorators/uploads.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 
 @ApiTags('upload')

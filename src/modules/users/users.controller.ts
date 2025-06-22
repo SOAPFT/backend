@@ -6,9 +6,9 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ApiDeleteUser,
   ApiGetUserInfo,
-  ApiLogout,
   ApiUpdateProfile,
-} from '@/decorators/swagger.decorator';
+  ApiLogout,
+} from './decorators/users.swagger';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('user')

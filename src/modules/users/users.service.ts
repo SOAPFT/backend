@@ -36,7 +36,7 @@ export class UsersService {
   }
 
   /**
-   * userUuid로 userId 조회
+   * userUuid로 userUuid 조회
    * @param userUuid 사용자 UUID
    * @returns 사용자 ID
    */
@@ -56,9 +56,8 @@ export class UsersService {
   }
 
   async logout(userUuid: string) {
-    const userId = await this.getUserIdByUuid(userUuid);
     await this.authRepository.update(
-      { userId },
+      { userUuid },
       {
         refreshToken: null,
       },

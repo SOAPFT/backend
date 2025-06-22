@@ -15,7 +15,7 @@ import {
   ApiNaverLogin,
   ApiRefreshToken,
   ApiTestAuth,
-} from '@/decorators/swagger.decorator';
+} from './decorators/auth.swagger';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { DevLoginDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';

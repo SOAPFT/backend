@@ -14,7 +14,7 @@ import {
   ApiCreateLike,
   ApiDeleteLike,
   ApiCheckLikeStatus,
-} from '@/decorators/swagger.decorator';
+} from './decorators/likes.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
 
@@ -41,28 +41,31 @@ export class LikesController {
 
   /**
    * 사용자가 게시글에 좋아요했는지 확인
-   * @param postId 게시글 ID
+   * @param postUuid 게시글 ULID
    * @param userUuid 사용자 UUID
    * @returns 좋아요 여부와 좋아요 ID
    */
-  @Get('check/:postId')
+  @Get('check/:postUuid')
   @ApiCheckLikeStatus()
   checkLikeStatus(
-    @Param('postId') postId: string,
+    @Param('postUuid') postUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return this.likesService.checkLikeStatus(userUuid, +postId);
+    return this.likesService.checkLikeStatus(userUuid, postUuid);
   }
 
   /**
    * 게시글 좋아요 삭제
-   * @param postId 게시글 ID
+   * @param postUuid 게시글 ULID
    * @param userUuid 사용자 UUID
    * @returns 삭제 성공 메시지와 업데이트된 좋아요 수
    */
-  @Delete('post/:postId/user')
+  @Delete('post/:postUuid/user')
   @ApiDeleteLike()
-  removeLike(@Param('postId') postId: string, @UserUuid() userUuid: string) {
-    return this.likesService.removeLike(+postId, userUuid);
+  removeLike(
+    @Param('postUuid') postUuid: string,
+    @UserUuid() userUuid: string,
+  ) {
+    return this.likesService.removeLike(postUuid, userUuid);
   }
 }

@@ -9,7 +9,7 @@ const logger = LoggerService.getInstance().logger;
 
 async function syncDatabase() {
   try {
-    logger.info('🧀 ssuled database sync..');
+    logger.info('🧀 soapft database sync..');
 
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize();

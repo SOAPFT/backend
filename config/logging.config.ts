@@ -27,7 +27,7 @@ export const winstonConfig: WinstonModuleOptions = {
       level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
       format: winston.format.combine(
         winston.format.timestamp(),
-        nestWinstonModuleUtilities.format.nestLike('SSULED', {
+        nestWinstonModuleUtilities.format.nestLike('SOAPFT', {
           prettyPrint: true,
           colors: true,
         }),

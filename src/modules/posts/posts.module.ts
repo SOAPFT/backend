@@ -5,27 +5,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Post } from '@/entities/post.entity';
 import { LikesModule } from '@/modules/likes/likes.module';
 import { CommentsModule } from '../comments/comments.module';
-import { GroupModule } from '../group/group.module';
+import { ChallengeModule } from '../challenges/challenge.module';
 import { User } from '@/entities/user.entity';
 import { UsersModule } from '../users/users.module';
-import { WorkoutLog } from '@/entities/workout-log.entity';
-import { QuarterlyStatistics } from '@/entities/quarterly-statistics.entity';
-import { QuarterlyRanking } from '@/entities/quarterly-ranking.entity';
-import { DailyGroupActivity } from '@/entities/daily-group-activity.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Post,
-      User,
-      WorkoutLog,
-      QuarterlyStatistics,
-      QuarterlyRanking,
-      DailyGroupActivity,
-    ]),
+    TypeOrmModule.forFeature([Post, User]),
     forwardRef(() => LikesModule),
     forwardRef(() => CommentsModule),
-    forwardRef(() => GroupModule),
+    forwardRef(() => ChallengeModule),
     forwardRef(() => UsersModule),
   ],
   controllers: [PostsController],

@@ -1,6 +1,10 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { AppService } from './app.service';
 import { Logger } from 'winston';
+import { ApiTags } from '@nestjs/swagger';
+import { ApiHealthCheck } from './decorators/swagger.decorator';
+
+@ApiTags('System')
 @Controller()
 export class AppController {
   constructor(
@@ -18,11 +22,12 @@ export class AppController {
   }
 
   @Get('health')
+  @ApiHealthCheck()
   healthCheck() {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
+      uptime: process.uptime(),
     };
   }
 }

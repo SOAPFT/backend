@@ -41,9 +41,8 @@ export class AuthService {
       expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRES_IN,
     });
 
-    const userId = await this.userService.getUserIdByUuid(findUser.userUuid);
     const existingAuth = await this.authRepository.findOne({
-      where: { userId },
+      where: { userUuid: findUser.userUuid },
     });
 
     const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
@@ -53,7 +52,7 @@ export class AuthService {
       await this.authRepository.save(existingAuth);
     } else {
       const newAuth = await this.authRepository.create({
-        userId,
+        userUuid: findUser.userUuid,
         refreshToken: hashedRefreshToken,
       });
       await this.authRepository.save(newAuth);
@@ -188,17 +187,15 @@ export class AuthService {
 
       console.log('payload:', payload);
 
-      const userId = await this.userService.getUserIdByUuid(payload.userUuid);
+      // 2. DB에 저장된 refreshToken과 비교
+      const auth = await this.authRepository.findOne({
+        where: { userUuid: payload.userUuid },
+      });
 
-      if (!userId) {
+      if (!auth) {
         console.log('에러나옴');
         return res.status(401).json({ message: '유효하지 않음' });
       }
-
-      // 2. DB에 저장된 refreshToken과 비교
-      const auth = await this.authRepository.findOne({
-        where: { userId },
-      });
       console.log('auth.refereshToken:', auth.refreshToken);
 
       if (!auth || !(await bcrypt.compare(refreshToken, auth.refreshToken))) {
@@ -276,12 +273,9 @@ export class AuthService {
       // 리프레시 토큰 해싱 및 저장
       const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
 
-      // 사용자 ID 가져오기
-      const userId = await this.userService.getUserIdByUuid(userUuid);
-
       // 기존 인증 정보 확인 및 업데이트 또는 생성
       const existingAuth = await this.authRepository.findOne({
-        where: { userId },
+        where: { userUuid },
       });
 
       if (existingAuth) {
@@ -289,7 +283,7 @@ export class AuthService {
         await this.authRepository.save(existingAuth);
       } else {
         const newAuth = this.authRepository.create({
-          userId,
+          userUuid,
           refreshToken: hashedRefreshToken,
         });
         await this.authRepository.save(newAuth);

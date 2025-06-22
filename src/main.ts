@@ -18,6 +18,7 @@ import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { GlobalExceptionFilter } from './utils/global-exception.filter';
 
 declare const module: any;
 
@@ -38,6 +39,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  app.useGlobalFilters(new GlobalExceptionFilter());
   app.enableCors({
     origin:
       process.env.NODE_ENV === 'production'
@@ -47,8 +49,8 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-    .setTitle('SSULED API')
-    .setDescription('SSULED API documentation')
+    .setTitle('SOAPFT API')
+    .setDescription('SOAPFT API documentation')
     .setVersion(process.env.npm_package_version || '0.0.1')
     .addBearerAuth(
       {
@@ -76,7 +78,7 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT') ?? 7777;
   await app.listen(port);
-  console.log(`💡SSULED ${port}번 포트에서 실행중입니다.`);
+  console.log(`💧SOAPFT ${port}번 포트에서 실행중입니다.`);
 
   if (module.hot) {
     module.hot.accept();

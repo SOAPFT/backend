@@ -19,13 +19,11 @@ import {
   ApiGetAllPosts,
   ApiGetPostById,
   ApiUpdatePost,
+  ApiGetPostsByNickname,
   ApiGetGroupPosts,
-  ApiGetPopularPosts,
-  ApiGetAllPostsByNickname,
-} from '@/decorators/swagger.decorator';
+} from './decorators/posts.swagger';
 import { FindAllPostsDto } from './dto/find-all-posts.dto';
 import { FindGroupPostsDto } from './dto/find-group-posts.dto';
-import { FindPopularPostsDto } from './dto/find-popular-posts.dto';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 
@@ -48,7 +46,7 @@ export class PostsController {
     @Body() createPostDto: CreatePostDto,
     @UserUuid() userUuid: string,
   ) {
-    return this.postsService.createPost(createPostDto, userUuid);
+    return null;
   }
 
   /**
@@ -63,7 +61,7 @@ export class PostsController {
     @Query() findAllPostsDto: FindAllPostsDto,
     @UserUuid() userUuid: string,
   ) {
-    return this.postsService.findAllPosts(findAllPostsDto, userUuid);
+    return null;
   }
 
   /**
@@ -73,65 +71,56 @@ export class PostsController {
    * @returns 사용자 게시글 목록
    */
   @Get('user/:nickname')
-  @ApiGetAllPostsByNickname()
+  @ApiGetPostsByNickname()
   findAllPostsByNickname(@Param('nickname') nickname: string) {
-    return this.postsService.findAllPostsByNickname(nickname);
-  }
-
-  /**
-   * 인기 게시글 조회
-   * @param findPopularPostsDto 조회 옵션
-   * @param userUuid 사용자 UUID
-   * @returns 좋아요, 댓글 순 인기 게시글 목록
-   */
-  @Get('popular')
-  @ApiGetPopularPosts()
-  findPopularPosts(
-    @Query() findPopularPostsDto: FindPopularPostsDto,
-    @UserUuid() userUuid: string,
-  ) {
-    return this.postsService.findPopularPosts(findPopularPostsDto, userUuid);
+    return null;
   }
 
   /**
    * 게시글 상세 조회
-   * @param postId 게시글 ID
+   * @param postUuid 게시글 ULID
    * @param userUuid 사용자 UUID
    * @returns 게시글 상세 정보
    */
-  @Get(':postId')
+  @Get(':postUuid')
   @ApiGetPostById()
-  findOnePost(@Param('postId') postId: string, @UserUuid() userUuid: string) {
-    return this.postsService.findOnePost(+postId, userUuid);
+  findOnePost(
+    @Param('postUuid') postUuid: string,
+    @UserUuid() userUuid: string,
+  ) {
+    return null;
   }
 
   /**
    * 게시글 수정
-   * @param postId 게시글 ID
+   * @param postUuid 게시글 ULID
    * @param updatePostDto 게시글 수정 정보
    * @param userUuid 사용자 UUID
    * @returns 수정된 게시글 정보
    */
-  @Patch(':postId')
+  @Patch(':postUuid')
   @ApiUpdatePost()
   updatePost(
-    @Param('postId') postId: string,
+    @Param('postUuid') postUuid: string,
     @Body() updatePostDto: UpdatePostDto,
     @UserUuid() userUuid: string,
   ) {
-    return this.postsService.updatePost(+postId, updatePostDto, userUuid);
+    return null;
   }
 
   /**
    * 게시글 삭제
-   * @param postId 게시글 ID
+   * @param postUuid 게시글 ULID
    * @param userUuid 사용자 UUID
    * @returns 삭제된 게시글 정보
    */
-  @Delete(':postId')
+  @Delete(':postUuid')
   @ApiDeletePost()
-  removePost(@Param('postId') postId: string, @UserUuid() userUuid: string) {
-    return this.postsService.removePost(+postId, userUuid);
+  removePost(
+    @Param('postUuid') postUuid: string,
+    @UserUuid() userUuid: string,
+  ) {
+    return null;
   }
 
   /**
@@ -148,10 +137,6 @@ export class PostsController {
     @Query() findGroupPostsDto: FindGroupPostsDto,
     @UserUuid() userUuid: string,
   ) {
-    return this.postsService.findGroupPosts(
-      +groupId,
-      findGroupPostsDto,
-      userUuid,
-    );
+    return null;
   }
 }

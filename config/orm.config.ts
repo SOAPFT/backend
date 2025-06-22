@@ -1,12 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { DataSource, DataSourceOptions } from 'typeorm';
+import { DataSource } from 'typeorm';
+import type { DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
-import { SeederOptions } from 'typeorm-extension';
-import { UserSeeder } from 'database/seeds/user.seeder';
-import { AuthSeeder } from 'database/seeds/auth.seeder';
-import { GroupSeeder } from 'database/seeds/group.seeder';
-import { LikeSeeder } from 'database/seeds/like.seeder';
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 config({ path: `env/.${nodeEnv}.env` });
@@ -21,7 +17,7 @@ export const typeOrmConfig = (
     port: parseInt(configService.get('DB_PORT') || '5432', 10),
     username: configService.get('DB_USERNAME') || 'postgres',
     password: configService.get('DB_PASSWORD') || 'postgres',
-    database: configService.get('DB_DATABASE') || 'ssuled',
+    database: configService.get('DB_DATABASE') || 'soapft',
     entities: [__dirname + '/../**/*.entity.{js,ts}'],
     synchronize: configService.get('NODE_ENV') !== 'production',
     logging: configService.get('NODE_ENV') !== 'production',
@@ -34,17 +30,16 @@ export const typeOrmConfig = (
   };
 };
 
-export const dataSourceOptions: DataSourceOptions & SeederOptions = {
+export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_DATABASE || 'ssuled',
+  database: process.env.DB_DATABASE || 'soapft',
   entities: [__dirname + '/../**/*.entity.{js,ts}'],
   migrations: [__dirname + '/../database/migrations/**/*.{js,ts}'],
   migrationsTableName: 'migrations',
-  seeds: [UserSeeder, AuthSeeder, GroupSeeder, LikeSeeder],
   ssl:
     process.env.NODE_ENV === 'production'
       ? { rejectUnauthorized: false }

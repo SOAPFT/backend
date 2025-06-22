@@ -29,7 +29,7 @@ export class LikesService {
     // 이미 좋아요한 게시글인지 확인
     const existingLike = await this.likeRepository.findOne({
       where: {
-        postId: createLikeDto.postId,
+        postUuid: createLikeDto.postUuid,
         userUuid,
       },
     });
@@ -38,20 +38,16 @@ export class LikesService {
       throw new ConflictException('이미 좋아요한 게시글입니다.');
     }
 
-    // 사용자 정보 조회
-    const userId = await this.userService.getUserIdByUuid(userUuid);
-
     // 좋아요 생성
     const like = this.likeRepository.create({
       ...createLikeDto,
-      userId,
       userUuid,
     });
 
     await this.likeRepository.save(like);
 
     // 게시글의 전체 좋아요 수 조회
-    const likeCount = await this.getLikeCountByPostId(createLikeDto.postId);
+    const likeCount = await this.getLikeCountByPostId(createLikeDto.postUuid);
 
     return {
       id: like.id,
@@ -61,26 +57,26 @@ export class LikesService {
 
   /**
    * 게시글의 좋아요 수 조회
-   * @param postId 게시글 ID
+   * @param postUuid 게시글 ID
    * @returns 좋아요 수
    */
-  async getLikeCountByPostId(postId: number): Promise<number> {
+  async getLikeCountByPostId(postUuid: string): Promise<number> {
     return this.likeRepository.count({
-      where: { postId },
+      where: { postUuid },
     });
   }
 
   /**
    * 사용자가 게시글에 좋아요했는지 확인
    * @param userUuid 사용자 UUID
-   * @param postId 게시글 ID
+   * @param postUuid 게시글 ID
    * @returns 좋아요 여부와 좋아요 ID
    */
-  async checkLikeStatus(userUuid: string, postId: number) {
+  async checkLikeStatus(userUuid: string, postUuid: string) {
     const like = await this.likeRepository.findOne({
       where: {
         userUuid,
-        postId,
+        postUuid,
       },
     });
 
@@ -91,14 +87,14 @@ export class LikesService {
 
   /**
    * 게시글 좋아요 삭제
-   * @param postId 게시글 ID
+   * @param postUuid 게시글 ID
    * @param userUuid 사용자 UUID
    * @returns 삭제 성공 메시지와 업데이트된 좋아요 수
    */
-  async removeLike(postId: number, userUuid: string) {
+  async removeLike(postUuid: string, userUuid: string) {
     const like = await this.likeRepository.findOne({
       where: {
-        postId,
+        postUuid,
         userUuid,
       },
     });
@@ -110,7 +106,7 @@ export class LikesService {
     await this.likeRepository.delete(like.id);
 
     // 업데이트된 좋아요 수 조회
-    const likeCount = await this.getLikeCountByPostId(postId);
+    const likeCount = await this.getLikeCountByPostId(postUuid);
 
     return {
       success: true,
@@ -120,28 +116,28 @@ export class LikesService {
 
   /**
    * 여러 게시글의 좋아요 수 조회
-   * @param postIds 게시글 ID 배열
+   * @param postUuids 게시글 ID 배열
    * @returns 게시글 ID를 키로 하는 좋아요 수 맵
    */
   async getLikeCountsByPostIds(
-    postIds: number[],
-  ): Promise<Map<number, number>> {
+    postUuids: string[],
+  ): Promise<Map<string, number>> {
     const likes = await this.likeRepository
       .createQueryBuilder('like')
-      .select('like.postId', 'postId')
+      .select('like.postUuid', 'postUuid')
       .addSelect('COUNT(like.id)', 'count')
-      .where('like.postId IN (:...postIds)', { postIds })
-      .groupBy('like.postId')
+      .where('like.postUuid IN (:...postUuids)', { postUuids })
+      .groupBy('like.postUuid')
       .getRawMany();
 
-    const likeCountMap = new Map<number, number>();
+    const likeCountMap = new Map<string, number>();
 
     // 모든 게시글에 대해 초기값 0 설정
-    postIds.forEach((id) => likeCountMap.set(id, 0));
+    postUuids.forEach((id) => likeCountMap.set(id, 0));
 
     // 좋아요가 있는 게시글의 카운트 설정
     likes.forEach((like) => {
-      likeCountMap.set(parseInt(like.postId), parseInt(like.count));
+      likeCountMap.set(like.postUuid, parseInt(like.count));
     });
 
     return likeCountMap;

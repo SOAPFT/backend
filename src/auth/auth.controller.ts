@@ -17,7 +17,7 @@ import {
   ApiTestAuth,
 } from './decorators/auth.swagger';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { DevLoginDto } from './dto/auth.dto';
+import { DevLoginDto, SocialLoginDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
 
@@ -37,14 +37,18 @@ export class AuthController {
 
   @Post('kakao')
   @ApiKakaoLogin()
-  async kakaoAuthCallback(@Body('code') code: string, @Res() res: Response) {
-    return this.authService.kakaoLogin(code, res);
+  async kakaoAuthCallback(
+    @Body()
+    body: SocialLoginDto,
+    @Res() res: Response,
+  ) {
+    return this.authService.kakaoLogin(body, res);
   }
 
   @Post('naver')
   @ApiNaverLogin()
-  async naverAuthCallback(@Body('code') code: string, @Res() res: Response) {
-    return this.authService.naverLogin(code, res);
+  async naverAuthCallback(@Body() body: SocialLoginDto, @Res() res: Response) {
+    return this.authService.naverLogin(body, res);
   }
 
   // refreshToken으로 accessToken 재발급

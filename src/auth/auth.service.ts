@@ -11,6 +11,9 @@ import { customAlphabet } from 'nanoid';
 import axios from 'axios';
 import * as bcrypt from 'bcryptjs';
 import { SocialProvider } from '@/types/social-provider.enum';
+import { SocialLoginDto } from './dto/auth.dto';
+import ms from 'ms';
+import { UserStatusType } from '@/types/user-status.enum';
 
 @Injectable()
 export class AuthService {
@@ -20,16 +23,30 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  private async handleSocialLogin(user: SocialRequest['user'], res: Response) {
+  private getRefreshTokenExpiryMs(): number {
+    const expiresIn = process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || '14d';
+    return typeof expiresIn === 'string' ? ms(expiresIn) : parseInt(expiresIn);
+  }
+  private async handleSocialLogin(
+    user: SocialRequest['user'],
+    deviceInfo: { deviceId?: string; deviceType?: string; appVersion?: string },
+    res: Response,
+  ) {
     // 유저 중복 검사
+    let isNewUser = false;
     let findUser = await this.userService.findOneBySocialId(user.socialId);
+
     if (!findUser) {
       // 없는 유저면 DB에 유저정보 저장
       const uuid = uuidv4();
       findUser = await this.userService.createUser(user, uuid);
+      isNewUser = true;
+    } else if (findUser.status === UserStatusType.INCOMPLETE) {
+      // 유저 정보 있는데 미완성
+      isNewUser = true;
     }
 
-    // 카카오 가입이 되어 있는 경우 accessToken 및 refreshToken 발급
+    // accessToken 및 refreshToken 발급
     const findUserPayload = { userUuid: findUser.userUuid };
     const access_token = await this.jwtService.sign(findUserPayload, {
       secret: process.env.JWT_ACCESS_TOKEN_SECRET,
@@ -41,67 +58,54 @@ export class AuthService {
       expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRES_IN,
     });
 
+    const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
+
     const existingAuth = await this.authRepository.findOne({
       where: { userUuid: findUser.userUuid },
     });
 
-    const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
+    const now = new Date();
+    const authData = {
+      userUuid: findUser.userUuid,
+      refreshToken: hashedRefreshToken,
+      deviceId: deviceInfo.deviceId || null,
+      deviceType: deviceInfo.deviceType || null,
+      appVersion: deviceInfo.appVersion || null,
+      lastLoginAt: now,
+      expiresAt: new Date(now.getTime() + this.getRefreshTokenExpiryMs()),
+    };
 
     if (existingAuth) {
-      existingAuth.refreshToken = hashedRefreshToken;
+      Object.assign(existingAuth, authData);
       await this.authRepository.save(existingAuth);
     } else {
-      const newAuth = await this.authRepository.create({
-        userUuid: findUser.userUuid,
-        refreshToken: hashedRefreshToken,
-      });
+      const newAuth = this.authRepository.create(authData);
       await this.authRepository.save(newAuth);
     }
 
     return res.json({
       access_token,
       refresh_token,
+      isNewUser,
       message: '로그인 성공',
     });
   }
 
-  async kakaoLogin(code: string, res: Response) {
+  async kakaoLogin(body: SocialLoginDto, res: Response) {
     try {
-      // 1. 인가 코드로 access token 요청
-      const tokenResponse = await axios.post(
-        'https://kauth.kakao.com/oauth/token',
-        null,
-        {
-          params: {
-            grant_type: 'authorization_code',
-            client_id: process.env.KAKAO_REST_API_KEY,
-            redirect_uri: process.env.KAKAO_REDIRECT_URL,
-            code: code,
-          },
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        },
-      );
-
-      const kakaoAccessToken = tokenResponse.data.access_token;
-
-      // 2. 카카오 access_token으로 사용자 정보 요청
+      // 카카오 access_token으로 사용자 정보 요청
       const userResponse = await axios.get(
         'https://kapi.kakao.com/v2/user/me',
         {
           headers: {
-            Authorization: `Bearer ${kakaoAccessToken}`,
+            Authorization: `Bearer ${body.accessToken}`,
           },
         },
       );
 
       const kakaoUser = userResponse.data;
 
-      const randomId = customAlphabet(
-        '0123456789abcdefghijklmnopqrstuvwxyz',
-        4,
-      );
+      const randomId = customAlphabet('0123456789', 3);
 
       const user = {
         socialId: kakaoUser.id.toString(),
@@ -109,9 +113,17 @@ export class AuthService {
         nickname: `익명_${randomId()}`,
         profileImage: kakaoUser.properties?.profile_image || '',
         socialProvider: SocialProvider.KAKAO,
-        introduction: null,
+        pushToken: body.pushToken || null,
       };
-      return await this.handleSocialLogin(user, res);
+      return await this.handleSocialLogin(
+        user,
+        {
+          deviceId: body.deviceId,
+          deviceType: body.deviceType,
+          appVersion: body.appVersion,
+        },
+        res,
+      );
     } catch (error) {
       console.log(error);
       return res.status(401).json({ message: '카카오 로그인 실패', error });
@@ -119,39 +131,17 @@ export class AuthService {
   }
 
   // naver login
-  async naverLogin(code: string, res: Response) {
+  async naverLogin(body: SocialLoginDto, res: Response) {
     try {
-      // 1. 네이버 토큰 요청
-      const tokenRes = await axios.post(
-        'https://nid.naver.com/oauth2.0/token',
-        null,
-        {
-          params: {
-            grant_type: 'authorization_code',
-            client_id: process.env.NAVER_ID,
-            client_secret: process.env.NAVER_SECRET,
-            code,
-          },
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        },
-      );
-
-      const accessToken = tokenRes.data.access_token;
-
       // 2. 유저 정보 요청
       const userRes = await axios.get('https://openapi.naver.com/v1/nid/me', {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${body.accessToken}`,
         },
       });
 
       const profile = userRes.data.response;
-      const randomId = customAlphabet(
-        '0123456789abcdefghijklmnopqrstuvwxyz',
-        4,
-      );
+      const randomId = customAlphabet('0123456789', 4);
 
       const user = {
         socialId: profile.id,
@@ -159,10 +149,18 @@ export class AuthService {
         nickname: `익명_${randomId()}`,
         profileImage: profile.profile_image || '',
         socialProvider: SocialProvider.NAVER,
-        introduction: null,
+        pushToken: body.pushToken || null,
       };
 
-      return this.handleSocialLogin(user, res);
+      return this.handleSocialLogin(
+        user,
+        {
+          deviceId: body.deviceId,
+          deviceType: body.deviceType,
+          appVersion: body.appVersion,
+        },
+        res,
+      );
     } catch (error) {
       console.log(error);
       return res.status(401).json({ message: '네이버 로그인 실패', error });

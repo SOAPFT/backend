@@ -51,6 +51,12 @@ export class AuthController {
     return this.authService.naverLogin(body, res);
   }
 
+  @Post('apple')
+  @ApiNaverLogin()
+  async appleAuthCallback(@Body() body: SocialLoginDto, @Res() res: Response) {
+    return this.authService.appleLogin(body, res);
+  }
+
   // refreshToken으로 accessToken 재발급
   @Post('refresh')
   @ApiRefreshToken()

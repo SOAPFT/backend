@@ -14,9 +14,13 @@ import { SocialProvider } from '@/types/social-provider.enum';
 import { SocialLoginDto } from './dto/auth.dto';
 import ms from 'ms';
 import { UserStatusType } from '@/types/user-status.enum';
+import { decodeTokenHeader } from '@/utils/apple-jwt.util';
+import { JwksClient } from 'jwks-rsa';
+import { JwtPayload } from './dto/oauth-apple.dto';
 
 @Injectable()
 export class AuthService {
+  private jwksClient: JwksClient;
   constructor(
     @InjectRepository(Auth) private readonly authRepository: Repository<Auth>,
     private readonly userService: UsersService,
@@ -164,6 +168,57 @@ export class AuthService {
     } catch (error) {
       console.log(error);
       return res.status(401).json({ message: '네이버 로그인 실패', error });
+    }
+  }
+
+  // apple login
+  async appleLogin(body: SocialLoginDto, res: Response) {
+    try {
+      const identityToken = body.accessToken; // iOS에서 넘겨주는 Apple identity token
+
+      // token의 header에서 kid 추출
+      const header = decodeTokenHeader(identityToken);
+      const kid = header.kid;
+
+      // Apple 공개키 가져오기
+      const key = await this.jwksClient.getSigningKey(kid);
+      const publicKey = key.getPublicKey();
+
+      // 토큰 검증 및 파싱
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(
+        identityToken,
+        {
+          algorithms: ['RS256'],
+          publicKey,
+        },
+      );
+
+      const appleUserId = payload.sub;
+      const email = payload.email || '';
+
+      const randomId = customAlphabet('0123456789', 4);
+
+      const user = {
+        socialId: appleUserId,
+        socialNickname: email, // Apple은 닉네임 안 줘서 이메일 등으로 대체
+        nickname: `익명_${randomId()}`,
+        profileImage: null, // Apple은 이미지 정보 없음
+        socialProvider: SocialProvider.APPLE,
+        pushToken: body.pushToken || null,
+      };
+
+      return this.handleSocialLogin(
+        user,
+        {
+          deviceId: body.deviceId,
+          deviceType: body.deviceType,
+          appVersion: body.appVersion,
+        },
+        res,
+      );
+    } catch (error) {
+      console.log(error);
+      return res.status(401).json({ message: '애플 로그인 실패', error });
     }
   }
 

@@ -5,18 +5,20 @@ import { Repository } from 'typeorm';
 import { SocialRequest } from './auth.controller';
 import { Request, Response } from 'express';
 import { UsersService } from '@/modules/users/users.service';
-import { v4 as uuidv4 } from 'uuid';
 import { JwtService } from '@nestjs/jwt';
 import { customAlphabet } from 'nanoid';
 import axios from 'axios';
 import * as bcrypt from 'bcryptjs';
 import { SocialProvider } from '@/types/social-provider.enum';
 import { SocialLoginDto } from './dto/auth.dto';
-import ms from 'ms';
+import * as ms from 'ms';
 import { UserStatusType } from '@/types/user-status.enum';
 import { decodeTokenHeader } from '@/utils/apple-jwt.util';
 import { JwksClient } from 'jwks-rsa';
 import { JwtPayload } from './dto/oauth-apple.dto';
+import { ulid } from 'ulid';
+import { ErrorCode } from '@/types/error-code.enum';
+import { CustomException } from '@/utils/custom-exception';
 
 @Injectable()
 export class AuthService {
@@ -42,7 +44,7 @@ export class AuthService {
 
     if (!findUser) {
       // 없는 유저면 DB에 유저정보 저장
-      const uuid = uuidv4();
+      const uuid = ulid();
       findUser = await this.userService.createUser(user, uuid);
       isNewUser = true;
     } else if (findUser.status === UserStatusType.INCOMPLETE) {
@@ -130,7 +132,10 @@ export class AuthService {
       );
     } catch (error) {
       console.log(error);
-      return res.status(401).json({ message: '카카오 로그인 실패', error });
+      CustomException.throw(
+        ErrorCode.UNAUTHORIZED,
+        '유효하지 않은 토큰입니다.',
+      );
     }
   }
 
@@ -167,7 +172,10 @@ export class AuthService {
       );
     } catch (error) {
       console.log(error);
-      return res.status(401).json({ message: '네이버 로그인 실패', error });
+      CustomException.throw(
+        ErrorCode.UNAUTHORIZED,
+        '유효하지 않은 토큰입니다.',
+      );
     }
   }
 
@@ -218,7 +226,10 @@ export class AuthService {
       );
     } catch (error) {
       console.log(error);
-      return res.status(401).json({ message: '애플 로그인 실패', error });
+      CustomException.throw(
+        ErrorCode.UNAUTHORIZED,
+        '유효하지 않은 토큰입니다.',
+      );
     }
   }
 
@@ -229,7 +240,10 @@ export class AuthService {
     console.log('refreshToken:', refreshToken);
 
     if (!refreshToken) {
-      return res.status(401).json({ message: '리프레시 토큰 없음' });
+      CustomException.throw(
+        ErrorCode.REFRESH_TOKEN_NOT_FOUND,
+        '리프레시 토큰이 없습니다.',
+      );
     }
 
     try {
@@ -246,13 +260,12 @@ export class AuthService {
       });
 
       if (!auth) {
-        console.log('에러나옴');
-        return res.status(401).json({ message: '유효하지 않음' });
+        CustomException.throw(ErrorCode.UNAUTHORIZED, '토큰이 유효하지 않음');
       }
       console.log('auth.refereshToken:', auth.refreshToken);
 
       if (!auth || !(await bcrypt.compare(refreshToken, auth.refreshToken))) {
-        return res.status(401).json({ message: '리프레시 토큰 불일치' });
+        CustomException.throw(ErrorCode.UNAUTHORIZED, '리프레시 토큰 불일치');
       }
 
       // 3. 새 accessToken 발급
@@ -297,9 +310,10 @@ export class AuthService {
       });
     } catch (error) {
       console.log(error);
-      return res
-        .status(401)
-        .json({ message: '리프레시 토큰 만료 혹은 잘못됨' });
+      CustomException.throw(
+        ErrorCode.UNAUTHORIZED,
+        '리프레시 토큰 만료 혹은 잘못됨',
+      );
     }
   }
 
@@ -348,10 +362,10 @@ export class AuthService {
       });
     } catch (error) {
       console.error('개발용 토큰 생성 에러:', error);
-      return res.status(500).json({
-        message: '개발용 토큰 생성 실패',
-        error: error.message,
-      });
+      CustomException.throw(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        '개발용 토큰 생성 실패',
+      );
     }
   }
 }

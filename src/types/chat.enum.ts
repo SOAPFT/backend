@@ -1,10 +1,10 @@
 export enum ChatRoomType {
-  DIRECT = 'direct',
-  GROUP = 'group',
+  DIRECT = 'DIRECT',
+  GROUP = 'GROUP',
 }
 
 export enum MessageType {
-  TEXT = 'text',
-  IMAGE = 'image',
-  SYSTEM = 'system',
+  TEXT = 'TEXT',
+  IMAGE = 'IMAGE',
+  SYSTEM = 'SYSTEM',
 }

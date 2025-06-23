@@ -12,6 +12,34 @@ import {
   CommonAuthResponses,
   CommonErrorResponses,
 } from '../../../decorators/swagger.decorator';
+import { OnBoardingDto } from '../dto/onBoarding.dto';
+
+export function ApiOnboarding() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '온보딩 정보 입력',
+      description: '회원가입 후 추가 정보(닉네임, 성별, 나이)를 입력합니다.',
+    }),
+    ApiBody({
+      type: OnBoardingDto,
+    }),
+    ApiResponse({
+      status: 201,
+      description: '회원가입 완료',
+      schema: {
+        type: 'object',
+        properties: {
+          statusCode: { type: 'number', example: 201 },
+          message: { type: 'string', example: '회원가입 완료' },
+        },
+      },
+    }),
+    ApiResponse(
+      createErrorResponse('USER_001', '해당 사용자를 찾을 수 없습니다.', 404),
+    ),
+    ApiResponse(CommonErrorResponses.InternalServerError),
+  );
+}
 
 export function ApiGetUserInfo() {
   return applyDecorators(

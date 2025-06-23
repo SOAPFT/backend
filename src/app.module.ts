@@ -15,6 +15,7 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { LikesModule } from './modules/likes/likes.module';
 import { UsersModule } from './modules/users/users.module';
 import { ChallengeModule } from './modules/challenges/challenge.module';
+import { ChatModule } from './modules/chat/chat.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -36,6 +37,7 @@ import { ChallengeModule } from './modules/challenges/challenge.module';
     LikesModule,
     UsersModule,
     ChallengeModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

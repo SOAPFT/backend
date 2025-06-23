@@ -59,8 +59,8 @@ export class AuthService {
     }
 
     return res.json({
-      access_token,
-      refresh_token,
+      accessToken: access_token,
+      refreshToken: refresh_token,
       message: '로그인 성공',
     });
   }
@@ -239,8 +239,8 @@ export class AuthService {
           ? 'accessToken 및 refreshToken 재발급 완료'
           : 'accessToken 재발급 완료',
 
-        access_token: newAccessToken,
-        refresh_token: newRefreshToken ? newRefreshToken : null,
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken ? newRefreshToken : null,
       });
     } catch (error) {
       console.log(error);
@@ -290,8 +290,8 @@ export class AuthService {
       }
 
       return res.json({
-        access_token,
-        refresh_token,
+        accessToken: access_token,
+        refreshToken: refresh_token,
       });
     } catch (error) {
       console.error('개발용 토큰 생성 에러:', error);

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHATTER</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Menlo:wght@400;700&display=swap');
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            background: #000;
+            color: #00ff41;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+                          .main-container {
+             max-width: 1100px;
+             margin: 0 auto;
+         }
+         
+         h1 {
+             text-align: left;
+             font-size: 16px;
+             color: #fff;
+             margin-bottom: 20px;
+             font-weight: bold;
+             border-bottom: 1px solid #333;
+             padding-bottom: 10px;
+         }
+        
+                 .container {
+             border: 1px solid #333;
+             border-radius: 0;
+             padding: 15px;
+             margin-bottom: 15px;
+             background: #000;
+         }
+         
+         h3 {
+             color: #fff;
+             margin-top: 0;
+             margin-bottom: 10px;
+             font-size: 14px;
+             font-weight: bold;
+         }
+        
+                 .messages {
+             height: 350px;
+             overflow-y: auto;
+             border: 1px solid #333;
+             padding: 10px;
+             margin-bottom: 10px;
+             background: #000;
+             font-size: 12px;
+         }
+        
+                 .message {
+             margin-bottom: 3px;
+             padding: 2px 0;
+             font-size: 12px;
+         }
+         
+         .message.my-message {
+             color: #00ff41;
+         }
+         
+         .message.other-message {
+             color: #fff;
+         }
+         
+         .message.system-message {
+             color: #ff6b35;
+             font-style: italic;
+         }
+        
+                 input {
+             padding: 4px 6px;
+             margin: 2px;
+             border: 1px solid #666;
+             border-radius: 0;
+             background: #000;
+             color: #00ff41;
+             font-family: inherit;
+             font-size: 12px;
+         }
+         
+         input:focus {
+             outline: none;
+             border-color: #00ff41;
+         }
+         
+         input::placeholder {
+             color: #666;
+         }
+        
+                 button {
+             padding: 4px 8px;
+             margin: 2px;
+             border: 1px solid #666;
+             border-radius: 0;
+             background: #333;
+             color: #fff;
+             font-family: inherit;
+             font-size: 12px;
+             cursor: pointer;
+         }
+         
+         button:hover {
+             background: #555;
+         }
+         
+         button:active {
+             background: #00ff41;
+             color: #000;
+         }
+        
+                 .status {
+             padding: 5px 10px;
+             margin: 5px 0;
+             border: 1px solid #666;
+             font-size: 12px;
+         }
+         
+         .status.connected {
+             border-color: #00ff41;
+             background: #001100;
+             color: #00ff41;
+         }
+         
+         .status.disconnected {
+             border-color: #ff6b35;
+             background: #110000;
+             color: #ff6b35;
+         }
+        
+                 .typing {
+             font-style: italic;
+             color: #999;
+             margin-top: 5px;
+             font-size: 11px;
+         }
+         
+         #logs {
+             height: 400px;
+             overflow-y: auto;
+             background: #000;
+             padding: 10px;
+             font-family: inherit;
+             font-size: 11px;
+             border: 1px solid #333;
+             color: #00ff41;
+         }
+        
+                 /* 스크롤바 스타일링 */
+         ::-webkit-scrollbar {
+             width: 8px;
+         }
+         
+         ::-webkit-scrollbar-track {
+             background: #000;
+         }
+         
+         ::-webkit-scrollbar-thumb {
+             background: #666;
+         }
+         
+         ::-webkit-scrollbar-thumb:hover {
+             background: #999;
+         }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>Chatter</h1>
+        
+        <!-- 연결 설정 -->
+        <div class="container">
+            <h3>Connection</h3>
+            <input type="text" id="serverUrl" value="http://localhost:7777" placeholder="server url">
+            <input type="text" id="jwtToken" placeholder="jwt token" style="width: 300px;">
+            <button onclick="connect()">connect</button>
+            <button onclick="disconnect()">disconnect</button>
+            <div id="connectionStatus" class="status disconnected">disconnected</div>
+        </div>
+
+                 <!-- 채팅방 관리 -->
+         <div class="container">
+             <h3>Room</h3>
+             <input type="text" id="roomUuid" placeholder="room uuid" style="width: 300px;">
+             <button onclick="joinRoom()">join</button>
+             <button onclick="leaveRoom()">leave</button>
+             <button onclick="markAsRead()">mark read</button>
+         </div>
+ 
+         <!-- 로그 -->
+         <div class="container">
+             <h3>System Log</h3>
+             <div id="logs"></div>
+             <button onclick="clearLogs()">clear</button>
+         </div>
+
+         <!-- 메시지 -->
+         <div class="container">
+             <h3>Messages</h3>
+             <div id="messages" class="messages"></div>
+             <div id="typing" class="typing"></div>
+             <div>
+                 <input type="text" id="messageInput" placeholder="type message..." style="width: 400px;" onkeypress="handleKeyPress(event)">
+                 <button onclick="sendMessage()">send</button>
+                 <button onclick="startTyping()">typing</button>
+                 <button onclick="stopTyping()">stop</button>
+             </div>
+         </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentRoomUuid = null;
+        let isTyping = false;
+
+        // 전역 에러 핸들러
+        window.addEventListener('error', function(event) {
+            console.error('전역 에러:', event.error);
+            log(`전역 에러: ${event.error?.message || event.message}`);
+            event.preventDefault(); // 페이지 새로고침 방지
+        });
+
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('처리되지 않은 Promise 에러:', event.reason);
+            log(`Promise 에러: ${event.reason?.message || event.reason}`);
+            event.preventDefault(); // 페이지 새로고침 방지
+        });
+
+        function log(message) {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            logs.innerHTML += `[${timestamp}] ${message}<br>`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function connect() {
+            try {
+                const serverUrl = document.getElementById('serverUrl').value.trim();
+                const jwtToken = document.getElementById('jwtToken').value.trim();
+
+                console.log('연결 시도');
+                console.log('서버 URL:', serverUrl);
+                console.log('JWT 토큰 길이:', jwtToken.length);
+
+                if (!jwtToken) {
+                    alert('jwt token required');
+                    return;
+                }
+
+                // 기존 연결이 있으면 해제
+                if (socket) {
+                    socket.disconnect();
+                }
+
+                log(`connecting to ${serverUrl}/chat`);
+                
+                socket = io(`${serverUrl}/chat`, {
+                    auth: {
+                        token: jwtToken
+                    },
+                    extraHeaders: {
+                        Authorization: `Bearer ${jwtToken}`
+                    },
+                    timeout: 10000, // 10초 타임아웃
+                    transports: ['websocket', 'polling'] // 전송 방식 명시
+                });
+            } catch (error) {
+                console.error('연결 중 에러:', error);
+                log(`connection error: ${error.message}`);
+                alert(`connection failed: ${error.message}`);
+            }
+
+            socket.on('connect', () => {
+                document.getElementById('connectionStatus').textContent = 'connected';
+                document.getElementById('connectionStatus').className = 'status connected';
+                log('websocket connected');
+            });
+
+            socket.on('disconnect', () => {
+                document.getElementById('connectionStatus').textContent = 'disconnected';
+                document.getElementById('connectionStatus').className = 'status disconnected';
+                log('websocket disconnected');
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('연결 에러:', error);
+                log(`connection error: ${error.message}`);
+                document.getElementById('connectionStatus').textContent = `connection failed: ${error.message}`;
+                document.getElementById('connectionStatus').className = 'status disconnected';
+            });
+
+            socket.on('error', (error) => {
+                console.error('Socket 에러:', error);
+                log(`socket error: ${JSON.stringify(error)}`);
+            });
+
+            socket.on('connected', (data) => {
+                log(`server handshake: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('newMessage', (data) => {
+                addMessage(data, false);
+                log(`new message: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('joinedRoom', (data) => {
+                currentRoomUuid = data.roomUuid;
+                log(`joined room: ${data.roomUuid}`);
+            });
+
+            socket.on('leftRoom', (data) => {
+                log(`left room: ${data.roomUuid}`);
+            });
+
+            socket.on('messagesRead', (data) => {
+                log(`messages read: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('userTyping', (data) => {
+                if (data.isTyping) {
+                    document.getElementById('typing').textContent = `${data.nickname} is typing...`;
+                } else {
+                    document.getElementById('typing').textContent = '';
+                }
+                log(`typing: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('systemMessage', (data) => {
+                addSystemMessage(data.message);
+                log(`system: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('notification', (data) => {
+                log(`notification: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('error', (data) => {
+                log(`error: ${JSON.stringify(data)}`);
+                alert(`error: ${data.message}`);
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+        }
+
+        function joinRoom() {
+            const roomUuid = document.getElementById('roomUuid').value.trim();
+            
+            console.log('joinRoom 호출됨');
+            console.log('socket 상태:', socket ? '연결됨' : '연결안됨');
+            console.log('roomUuid:', roomUuid);
+            
+            if (!socket) {
+                alert('websocket connection required');
+                return;
+            }
+            
+            if (!roomUuid) {
+                alert('room uuid required');
+                return;
+            }
+
+            socket.emit('joinRoom', { roomUuid });
+            document.getElementById('messages').innerHTML = '';
+            log(`attempting to join room: ${roomUuid}`);
+        }
+
+        function leaveRoom() {
+            const roomUuid = document.getElementById('roomUuid').value;
+            if (!socket || !roomUuid) {
+                alert('socket connection and room uuid required');
+                return;
+            }
+
+            socket.emit('leaveRoom', { roomUuid });
+            currentRoomUuid = null;
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const roomUuid = document.getElementById('roomUuid').value;
+            
+            if (!socket || !roomUuid || !messageInput.value.trim()) {
+                alert('socket connection, room uuid, and message content required');
+                return;
+            }
+
+            const messageData = {
+                roomUuid,
+                message: {
+                    type: 'TEXT',
+                    content: messageInput.value.trim()
+                }
+            };
+
+            socket.emit('sendMessage', messageData);
+            addMessage({
+                content: messageInput.value.trim(),
+                isMyMessage: true,
+                createdAt: new Date().toISOString()
+            }, true);
+
+            messageInput.value = '';
+            stopTyping();
+        }
+
+        function markAsRead() {
+            const roomUuid = document.getElementById('roomUuid').value;
+            if (!socket || !roomUuid) {
+                alert('socket connection and room uuid required');
+                return;
+            }
+
+            socket.emit('markAsRead', { roomUuid });
+        }
+
+        function startTyping() {
+            const roomUuid = document.getElementById('roomUuid').value;
+            if (!socket || !roomUuid || isTyping) {
+                return;
+            }
+
+            isTyping = true;
+            socket.emit('typing', { roomUuid, isTyping: true });
+        }
+
+        function stopTyping() {
+            const roomUuid = document.getElementById('roomUuid').value;
+            if (!socket || !roomUuid || !isTyping) {
+                return;
+            }
+
+            isTyping = false;
+            socket.emit('typing', { roomUuid, isTyping: false });
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            } else if (!isTyping) {
+                startTyping();
+                // 3초 후 자동으로 타이핑 중지
+                setTimeout(() => {
+                    if (isTyping) stopTyping();
+                }, 3000);
+            }
+        }
+
+        function addMessage(data, isMyMessage) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isMyMessage ? 'my-message' : 'other-message'}`;
+            
+            const time = new Date(data.createdAt).toLocaleTimeString();
+            const sender = data.sender ? data.sender.nickname : '나';
+            
+            messageDiv.innerHTML = `
+                <strong>${isMyMessage ? '[USER]' : '[' + sender + ']'}</strong>
+                <div>${data.content}</div>
+                <small>[${time}]</small>
+            `;
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addSystemMessage(message) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system-message';
+            messageDiv.textContent = message;
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // 페이지 로드 시 기본값 설정
+        window.onload = function() {
+            log('terminal initialized');
+            log('system ready');
+        };
+    </script>
+</body>
+</html> 

@@ -13,6 +13,7 @@ import {
   ApiDevToken,
   ApiKakaoLogin,
   ApiNaverLogin,
+  ApiAppleLogin,
   ApiRefreshToken,
   ApiTestAuth,
 } from './decorators/auth.swagger';
@@ -52,7 +53,7 @@ export class AuthController {
   }
 
   @Post('apple')
-  @ApiNaverLogin()
+  @ApiAppleLogin()
   async appleAuthCallback(@Body() body: SocialLoginDto, @Res() res: Response) {
     return this.authService.appleLogin(body, res);
   }

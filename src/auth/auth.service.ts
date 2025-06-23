@@ -90,8 +90,8 @@ export class AuthService {
     }
 
     return res.json({
-      access_token,
-      refresh_token,
+      accessToken: access_token,
+      refreshToken: refresh_token,
       isNewUser,
       message: '로그인 성공',
     });

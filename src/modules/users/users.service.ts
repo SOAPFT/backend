@@ -6,6 +6,9 @@ import { Repository } from 'typeorm';
 import { Post } from '@/entities/post.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserStatusType } from '@/types/user-status.enum';
+import { OnBoardingDto } from './dto/onBoarding.dto';
+import { CustomException } from '@/utils/custom-exception';
+import { ErrorCode } from '@/types/error-code.enum';
 
 @Injectable()
 export class UsersService {
@@ -30,6 +33,7 @@ export class UsersService {
       profileImage: user.profileImage,
       socialProvider: user.socialProvider,
       socialId: user.socialId,
+      pushToken: user.pushToken,
       status: UserStatusType.INCOMPLETE,
     });
     return this.userRepository.save(newUser);
@@ -53,6 +57,28 @@ export class UsersService {
     }
 
     return user.id;
+  }
+
+  // 최초 회원가입 후 추가 정보 입력
+  async completeOnboarding(userUuid: string, dto: OnBoardingDto) {
+    const user = await this.userRepository.findOne({ where: { userUuid } });
+    if (!user) {
+      CustomException.throw(
+        ErrorCode.USER_NOT_FOUND,
+        '해당 사용자를 찾을 수 없습니다.',
+      );
+    }
+
+    user.nickname = dto.nickname;
+    user.gender = dto.gender;
+    user.age = dto.age;
+    user.status = UserStatusType.ACTIVE;
+
+    await this.userRepository.save(user);
+    return {
+      statusCode: 201,
+      message: '회원가입 완료',
+    };
   }
 
   async logout(userUuid: string) {

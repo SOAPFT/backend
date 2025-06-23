@@ -8,8 +8,10 @@ import {
   ApiGetUserInfo,
   ApiUpdateProfile,
   ApiLogout,
+  ApiOnboarding,
 } from './decorators/users.swagger';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { OnBoardingDto } from './dto/onBoarding.dto';
 
 @ApiTags('user')
 @ApiBearerAuth('JWT-auth')
@@ -18,10 +20,19 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Post('onboarding')
+  @ApiOnboarding()
+  async completeOnboarding(
+    @Body() onBoardingDto: OnBoardingDto,
+    @UserUuid() UserUuid: string,
+  ) {
+    return this.usersService.completeOnboarding(UserUuid, onBoardingDto);
+  }
+
   @Post('logout')
   @ApiLogout()
-  async logout(@UserUuid() userUuid: string) {
-    return this.usersService.logout(userUuid);
+  async logout(@UserUuid() UserUuid: string) {
+    return this.usersService.logout(UserUuid);
   }
 
   @Post('profile')

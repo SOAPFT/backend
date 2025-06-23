@@ -113,11 +113,14 @@ export class AuthService {
 
       const randomId = customAlphabet('0123456789', 3);
 
+      console.log(kakaoUser);
+      console.log(body);
+
       const user = {
         socialId: kakaoUser.id.toString(),
-        socialNickname: kakaoUser.properties?.nickname || '',
+        socialNickname: kakaoUser.kakao_account?.profile.nickname || '',
         nickname: `익명_${randomId()}`,
-        profileImage: kakaoUser.properties?.profile_image || '',
+        profileImage: kakaoUser.kakao_account?.profile.profile_image_url || '',
         socialProvider: SocialProvider.KAKAO,
         pushToken: body.pushToken || null,
       };

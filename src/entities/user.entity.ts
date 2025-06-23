@@ -73,7 +73,7 @@ export class User {
     name: 'status',
     type: 'enum',
     enum: UserStatusType,
-    default: UserStatusType.ACTIVE,
+    default: UserStatusType.INCOMPLETE,
   })
   status: UserStatusType;
 

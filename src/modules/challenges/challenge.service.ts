@@ -11,7 +11,10 @@ import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { FindAllChallengesDto } from './dto/find-all-challenges.dto';
 import { User } from '@/entities/user.entity';
-
+import { ulid } from 'ulid';
+import { ChallengeType } from '@/types/challenge.enum';
+import { CustomException } from '@/utils/custom-exception';
+import { ErrorCode } from '@/types/error-code.enum';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -28,8 +31,64 @@ export class ChallengeService {
     createChallengeDto: CreateChallengeDto,
     userUuid: string,
   ) {
+    // 날짜 check
+    const now = new Date();
+    const startDate = new Date(createChallengeDto.start_date);
+    const endDate = new Date(createChallengeDto.end_date);
+
+    // 시작일이 현재보다 과거
+    if (startDate < now) {
+      CustomException.throw(
+        ErrorCode.INVALID_CHALLENGE_DATES,
+        '시작일은 현재 시각 이후여야 합니다.',
+      );
+    }
+
+    // 종료일 체크
+    if (endDate < startDate) {
+      CustomException.throw(
+        ErrorCode.INVALID_CHALLENGE_DATES,
+        '종료일은 시작일보다 이후여야 합니다.',
+      );
+    }
+    if (endDate < now) {
+      CustomException.throw(
+        ErrorCode.INVALID_CHALLENGE_DATES,
+        '종료일은 현재 시각 이후여야 합니다.',
+      );
+    }
+
     // TODO: 챌린지 생성 로직 구현
-    throw new Error('Method not implemented.');
+    const challengeUuid = ulid();
+    const challenge = await this.challengeRepository.create({
+      challengeUuid,
+      title: createChallengeDto.title,
+      type: ChallengeType.NORMAL,
+      profile: createChallengeDto.profile,
+      banner: createChallengeDto.banner,
+      introduce: createChallengeDto.introduce,
+      startDate: createChallengeDto.start_date,
+      endDate: createChallengeDto.end_date,
+      goal: createChallengeDto.goal,
+      startAge: createChallengeDto.start_age,
+      endAge: createChallengeDto.end_age,
+      gender: createChallengeDto.gender,
+      maxMember: createChallengeDto.max_member,
+      creatorUuid: userUuid,
+      participantUuid: [],
+      coinAmount: createChallengeDto.coin_amount,
+      isStarted: false,
+      isFinished: false,
+      successParticipantsUuid: [],
+    });
+
+    await this.challengeRepository.save(challenge);
+    return {
+      message: '챌린지 생성 성공',
+      data: {
+        challengeId: challenge.challengeUuid,
+      },
+    };
   }
 
   /**

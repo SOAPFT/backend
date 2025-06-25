@@ -8,3 +8,9 @@ export enum GenderType {
   MALE = 'MALE',
   FEMALE = 'FEMALE',
 }
+
+export enum ChallengeStatusType {
+  BEFORE = 'before',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+}

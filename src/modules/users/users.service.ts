@@ -38,6 +38,7 @@ export class UsersService {
       socialProvider: user.socialProvider,
       socialId: user.socialId,
       pushToken: user.pushToken,
+      coins: 15,
       status: UserStatusType.INCOMPLETE,
     });
     return this.userRepository.save(newUser);

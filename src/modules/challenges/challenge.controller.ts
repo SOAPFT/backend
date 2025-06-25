@@ -23,6 +23,7 @@ import {
   ApiJoinChallenge,
   ApiGetUserChallenges,
   ApiLeaveChallenge,
+  ApiGetRecentChallenges,
 } from './decorators/challenges.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
@@ -73,18 +74,29 @@ export class ChallengeController {
   }
 
   /**
+   * 최근 생성된 챌린지 목록
+   * @returns 최근 생성된 챌린지 목록
+   */
+
+  @Get('recent')
+  @ApiGetRecentChallenges()
+  getRecentChallenges() {
+    return this.challengeService.getRecentChallenges();
+  }
+
+  /**
    * 챌린지 상세 조회
    * @param challengeId 챌린지 ID
    * @param userUuid 현재 로그인한 사용자의 UUID
    * @returns 챌린지 상세 정보
    */
-  @Get(':challengeId')
+  @Get(':challengeUuid')
   @ApiGetChallenge()
   findOne(
-    @Param('challengeId') challengeId: string,
+    @Param('challengeUuid') challengeUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return this.challengeService.findOneChallenge(+challengeId, userUuid);
+    return this.challengeService.findOneChallenge(challengeUuid, userUuid);
   }
 
   /**

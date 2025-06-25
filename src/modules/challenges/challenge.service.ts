@@ -11,6 +11,12 @@ import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { FindAllChallengesDto } from './dto/find-all-challenges.dto';
 import { User } from '@/entities/user.entity';
+import { ulid } from 'ulid';
+import { ChallengeType, GenderType } from '@/types/challenge.enum';
+import { CustomException } from '@/utils/custom-exception';
+import { ErrorCode } from '@/types/error-code.enum';
+import { MoreThan, LessThan, MoreThanOrEqual } from 'typeorm';
+import { subDays } from 'date-fns';
 
 @Injectable()
 export class ChallengeService {
@@ -28,8 +34,74 @@ export class ChallengeService {
     createChallengeDto: CreateChallengeDto,
     userUuid: string,
   ) {
+    // 날짜 check
+    const now = new Date();
+    const startDate = new Date(createChallengeDto.start_date);
+    const endDate = new Date(createChallengeDto.end_date);
+    const user = await this.userRepository.findOne({ where: { userUuid } });
+
+    if (user.coins - createChallengeDto.coin_amount < 0) {
+      CustomException.throw(
+        ErrorCode.INSUFFICIENT_COINS,
+        '챌린지를 생성할 코인이 부족합니다.',
+      );
+    }
+
+    user.coins = user.coins - createChallengeDto.coin_amount;
+
+    // 시작일이 현재보다 과거
+    if (startDate < now) {
+      CustomException.throw(
+        ErrorCode.INVALID_CHALLENGE_DATES,
+        '시작일은 현재 시각 이후여야 합니다.',
+      );
+    }
+
+    // 종료일 체크
+    if (endDate < startDate) {
+      CustomException.throw(
+        ErrorCode.INVALID_CHALLENGE_DATES,
+        '종료일은 시작일보다 이후여야 합니다.',
+      );
+    }
+    if (endDate < now) {
+      CustomException.throw(
+        ErrorCode.INVALID_CHALLENGE_DATES,
+        '종료일은 현재 시각 이후여야 합니다.',
+      );
+    }
+
     // TODO: 챌린지 생성 로직 구현
-    throw new Error('Method not implemented.');
+    const challengeUuid = ulid();
+    const challenge = await this.challengeRepository.create({
+      challengeUuid,
+      title: createChallengeDto.title,
+      type: ChallengeType.NORMAL,
+      profile: createChallengeDto.profile,
+      banner: createChallengeDto.banner,
+      introduce: createChallengeDto.introduce,
+      verificationGuide: createChallengeDto.verificationGuide,
+      startDate,
+      endDate,
+      goal: createChallengeDto.goal,
+      startAge: createChallengeDto.start_age,
+      endAge: createChallengeDto.end_age,
+      gender: createChallengeDto.gender,
+      maxMember: createChallengeDto.max_member,
+      creatorUuid: userUuid,
+      participantUuid: [userUuid],
+      coinAmount: createChallengeDto.coin_amount,
+      isStarted: false,
+      isFinished: false,
+      successParticipantsUuid: [],
+    });
+
+    await this.challengeRepository.save(challenge);
+    await this.userRepository.save(user);
+    return {
+      message: '챌린지가 성공적으로 생성되었습니다.',
+      challengeUuid: challenge.challengeUuid,
+    };
   }
 
   /**
@@ -37,22 +109,67 @@ export class ChallengeService {
    */
   async findAllChallenges(findAllChallengesDto: FindAllChallengesDto) {
     // TODO: 챌린지 목록 조회 로직 구현
-    throw new Error('Method not implemented.');
+    const {
+      page = 1,
+      limit = 10,
+      type,
+      gender = GenderType.NONE,
+      status,
+    } = findAllChallengesDto;
+
+    const where: Record<string, any> = {};
+
+    if (type) where.type = type;
+    if (gender) where.gender = gender;
+
+    const now = new Date();
+
+    if (status === 'before') {
+      where.startDate = MoreThan(now);
+    } else if (status === 'in_progress') {
+      where.startDate = LessThan(now);
+      where.endDate = MoreThan(now);
+    } else if (status === 'completed') {
+      where.endDate = LessThan(now);
+    }
+
+    const [challenges, total] = await this.challengeRepository.findAndCount({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: challenges,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+      },
+    };
   }
 
   /**
    * 챌린지 상세 조회
    */
-  async findOneChallenge(challengeId: number, userUuid: string) {
+  async findOneChallenge(challengeUuid: string, userUuid: string) {
     const challenge = await this.challengeRepository.findOne({
-      where: { id: challengeId },
+      where: { challengeUuid },
     });
 
     if (!challenge) {
-      throw new NotFoundException('해당 ID의 챌린지를 찾을 수 없습니다.');
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_FOUND,
+        '해당 아이디의 챌린지가 없습니다.',
+      );
     }
 
-    return challenge;
+    const isParticipated = challenge.participantUuid.includes(userUuid);
+
+    return { ...challenge, isParticipated };
   }
 
   /**
@@ -77,6 +194,26 @@ export class ChallengeService {
   ) {
     // TODO: 챌린지 수정 로직 구현
     throw new Error('Method not implemented.');
+  }
+
+  /**
+   * 최근 생성된 챌린지 목록
+   */
+
+  async getRecentChallenges() {
+    const onWeekAgo = subDays(new Date(), 7);
+
+    const challenges = await this.challengeRepository.find({
+      where: {
+        createdAt: MoreThanOrEqual(onWeekAgo),
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+      take: 15,
+    });
+
+    return challenges;
   }
 
   /**

@@ -12,6 +12,8 @@ import {
   CommonAuthResponses,
   CommonErrorResponses,
 } from '../../../decorators/swagger.decorator';
+import { CreateChallengeDto } from '../dto/create-challenge.dto';
+import { GenderType, ChallengeType } from '@/types/challenge.enum';
 
 export function ApiCreateChallenge() {
   return applyDecorators(
@@ -19,180 +21,27 @@ export function ApiCreateChallenge() {
       summary: '챌린지 생성',
       description: '새로운 챌린지를 생성합니다.',
     }),
-    ApiBearerAuth(),
     ApiBody({
+      type: CreateChallengeDto,
+    }),
+    ApiResponse({
+      status: 201,
+      description: '챌린지 생성 성공',
       schema: {
         type: 'object',
-        required: [
-          'title',
-          'introduce',
-          'startDate',
-          'endDate',
-          'goal',
-          'coinAmount',
-        ],
         properties: {
-          title: {
+          challengeId: { type: 'number', example: 1 },
+          message: {
             type: 'string',
-            description: '챌린지 제목',
-            example: '30일 헬스 챌린지',
-          },
-          type: {
-            type: 'string',
-            enum: ['NORMAL', 'EVENT'],
-            description: '챌린지 타입',
-            example: 'NORMAL',
-          },
-          profile: {
-            type: 'string',
-            description: '챌린지 프로필 이미지 URL',
-            example:
-              'https://soapft-bucket.s3.amazonaws.com/images/challenge-profile.jpg',
-          },
-          banner: {
-            type: 'string',
-            description: '챌린지 배너 이미지 URL',
-            example:
-              'https://soapft-bucket.s3.amazonaws.com/images/challenge-banner.jpg',
-          },
-          introduce: {
-            type: 'string',
-            description: '챌린지 소개',
-            example: '매일 헬스장에서 운동하고 인증하는 챌린지입니다!',
-          },
-          startDate: {
-            type: 'string',
-            format: 'date',
-            description: '챌린지 시작일',
-            example: '2025-07-01',
-          },
-          endDate: {
-            type: 'string',
-            format: 'date',
-            description: '챌린지 종료일',
-            example: '2025-07-31',
-          },
-          goal: {
-            type: 'number',
-            description: '주당 목표 인증 횟수',
-            example: 5,
-          },
-          startAge: {
-            type: 'number',
-            description: '참여 가능 최소 연령',
-            example: 18,
-          },
-          endAge: {
-            type: 'number',
-            description: '참여 가능 최대 연령',
-            example: 65,
-          },
-          gender: {
-            type: 'string',
-            enum: ['ALL', 'MALE', 'FEMALE'],
-            description: '참여 가능 성별',
-            example: 'ALL',
-          },
-          maxMember: {
-            type: 'number',
-            description: '최대 참여 인원',
-            example: 50,
-          },
-          coinAmount: {
-            type: 'number',
-            description: '참여비 (코인)',
-            example: 1000,
+            example: '챌린지가 성공적으로 생성되었습니다.',
           },
         },
       },
     }),
     ApiResponse({
-      status: 201,
-      description: '챌린지가 성공적으로 생성됨',
-      schema: {
-        type: 'object',
-        properties: {
-          challengeUuid: {
-            type: 'string',
-            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-          },
-          title: {
-            type: 'string',
-            example: '30일 헬스 챌린지',
-          },
-          type: {
-            type: 'string',
-            example: 'NORMAL',
-          },
-          introduce: {
-            type: 'string',
-            example: '매일 헬스장에서 운동하고 인증하는 챌린지입니다!',
-          },
-          startDate: {
-            type: 'string',
-            format: 'date',
-            example: '2025-07-01',
-          },
-          endDate: {
-            type: 'string',
-            format: 'date',
-            example: '2025-07-31',
-          },
-          goal: {
-            type: 'number',
-            example: 5,
-          },
-          maxMember: {
-            type: 'number',
-            example: 50,
-          },
-          currentMember: {
-            type: 'number',
-            example: 1,
-          },
-          coinAmount: {
-            type: 'number',
-            example: 1000,
-          },
-          isStarted: {
-            type: 'boolean',
-            example: false,
-          },
-          isFinished: {
-            type: 'boolean',
-            example: false,
-          },
-          creatorUuid: {
-            type: 'string',
-            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-          },
-          createdAt: {
-            type: 'string',
-            format: 'date-time',
-            example: '2025-06-22T12:00:00Z',
-          },
-        },
-      },
+      status: 500,
+      description: '서버 에러',
     }),
-    ApiResponse(CommonAuthResponses.Unauthorized),
-    ApiResponse(
-      createErrorResponse('COIN_001', '코인이 부족합니다.', 400, {
-        requiredCoins: 1000,
-        currentCoins: 500,
-      }),
-    ),
-    ApiResponse(
-      createErrorResponse('CHALLENGE_001', '잘못된 챌린지 정보입니다.', 400),
-    ),
-    ApiResponse(
-      createErrorResponse(
-        'CHALLENGE_002',
-        '시작일이 종료일보다 늦을 수 없습니다.',
-        400,
-      ),
-    ),
-    ApiResponse(CommonErrorResponses.ValidationFailed),
-    ApiResponse(CommonErrorResponses.InternalServerError),
   );
 }
 
@@ -200,7 +49,7 @@ export function ApiGetAllChallenges() {
   return applyDecorators(
     ApiOperation({
       summary: '챌린지 목록 조회',
-      description: '모든 챌린지 목록을 조회합니다.',
+      description: '필터 및 페이지네이션 조건에 따라 챌린지 목록을 조회합니다.',
     }),
     ApiQuery({
       name: 'page',
@@ -217,16 +66,20 @@ export function ApiGetAllChallenges() {
     ApiQuery({
       name: 'type',
       required: false,
-      description: '챌린지 타입 필터',
-      enum: ['NORMAL', 'EVENT'],
-      example: 'NORMAL',
+      description: '챌린지 유형',
+      enum: ChallengeType,
+    }),
+    ApiQuery({
+      name: 'gender',
+      required: false,
+      description: '성별 필터',
+      enum: GenderType,
     }),
     ApiQuery({
       name: 'status',
       required: false,
-      description: '챌린지 상태 필터',
-      enum: ['recruiting', 'ongoing', 'finished'],
-      example: 'recruiting',
+      description: '챌린지 상태 (before | in_progress | finished)',
+      example: '',
     }),
     ApiResponse({
       status: 200,
@@ -234,80 +87,49 @@ export function ApiGetAllChallenges() {
       schema: {
         type: 'object',
         properties: {
-          challenges: {
+          data: {
             type: 'array',
             items: {
               type: 'object',
               properties: {
-                challengeUuid: {
-                  type: 'string',
-                  example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-                },
-                title: { type: 'string', example: '30일 헬스 챌린지' },
+                challengeUuid: { type: 'string', example: '01HZQK5J8X...' },
+                title: { type: 'string', example: '하루 만보 챌린지' },
                 type: { type: 'string', example: 'NORMAL' },
+                gender: { type: 'string', example: 'ALL' },
                 profile: {
                   type: 'string',
-                  example: 'https://example.com/profile.jpg',
-                },
-                banner: {
-                  type: 'string',
-                  example: 'https://example.com/banner.jpg',
-                },
-                introduce: {
-                  type: 'string',
-                  example: '매일 헬스장에서 운동하고 인증하는 챌린지입니다!',
+                  example: 'https://example.com/image.jpg',
                 },
                 startDate: {
                   type: 'string',
-                  format: 'date',
-                  example: '2025-07-01',
+                  format: 'date-time',
+                  example: '2025-07-01T00:00:00Z',
                 },
                 endDate: {
                   type: 'string',
-                  format: 'date',
-                  example: '2025-07-31',
+                  format: 'date-time',
+                  example: '2025-07-31T00:00:00Z',
                 },
-                goal: { type: 'number', example: 5 },
-                maxMember: { type: 'number', example: 50 },
-                currentMember: { type: 'number', example: 25 },
-                coinAmount: { type: 'number', example: 1000 },
                 isStarted: { type: 'boolean', example: false },
                 isFinished: { type: 'boolean', example: false },
-                creator: {
-                  type: 'object',
-                  properties: {
-                    userUuid: {
-                      type: 'string',
-                      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-                    },
-                    nickname: { type: 'string', example: '챌린지마스터' },
-                    profileImage: {
-                      type: 'string',
-                      example: 'https://example.com/profile.jpg',
-                    },
-                  },
-                },
-                createdAt: {
-                  type: 'string',
-                  format: 'date-time',
-                  example: '2025-06-22T12:00:00Z',
-                },
+                currentMember: { type: 'number', example: 12 },
+                maxMember: { type: 'number', example: 50 },
               },
             },
           },
-          pagination: {
+          meta: {
             type: 'object',
             properties: {
-              currentPage: { type: 'number', example: 1 },
-              totalPages: { type: 'number', example: 5 },
-              totalItems: { type: 'number', example: 50 },
-              itemsPerPage: { type: 'number', example: 10 },
+              total: { type: 'number', example: 123 },
+              page: { type: 'number', example: 1 },
+              limit: { type: 'number', example: 10 },
+              totalPages: { type: 'number', example: 13 },
+              hasNextPage: { type: 'boolean', example: true },
             },
           },
         },
       },
     }),
-    ApiResponse(CommonErrorResponses.InternalServerError),
   );
 }
 
@@ -339,58 +161,19 @@ export function ApiGetChallenge() {
             example: 'https://example.com/profile.jpg',
           },
           banner: { type: 'string', example: 'https://example.com/banner.jpg' },
-          introduce: {
-            type: 'string',
-            example: '매일 헬스장에서 운동하고 인증하는 챌린지입니다!',
-          },
-          startDate: { type: 'string', format: 'date', example: '2025-07-01' },
-          endDate: { type: 'string', format: 'date', example: '2025-07-31' },
+          introduce: { type: 'string', example: '매일 인증하는 챌린지입니다!' },
+          startDate: { type: 'string', example: '2025-07-01' },
+          endDate: { type: 'string', example: '2025-07-31' },
           goal: { type: 'number', example: 5 },
           startAge: { type: 'number', example: 18 },
           endAge: { type: 'number', example: 65 },
           gender: { type: 'string', example: 'ALL' },
           maxMember: { type: 'number', example: 50 },
-          currentMember: { type: 'number', example: 25 },
           coinAmount: { type: 'number', example: 1000 },
           isStarted: { type: 'boolean', example: false },
           isFinished: { type: 'boolean', example: false },
-          creator: {
-            type: 'object',
-            properties: {
-              userUuid: {
-                type: 'string',
-                example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-              },
-              nickname: { type: 'string', example: '챌린지마스터' },
-              profileImage: {
-                type: 'string',
-                example: 'https://example.com/profile.jpg',
-              },
-            },
-          },
-          participants: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                userUuid: {
-                  type: 'string',
-                  example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-                },
-                nickname: { type: 'string', example: '참여자1' },
-                profileImage: {
-                  type: 'string',
-                  example: 'https://example.com/profile.jpg',
-                },
-                joinedAt: {
-                  type: 'string',
-                  format: 'date-time',
-                  example: '2025-06-22T12:00:00Z',
-                },
-              },
-            },
-          },
-          isParticipating: { type: 'boolean', example: false },
+          creatorUuid: { type: 'string', example: '01HX123456789ABCDE' },
+          isParticipating: { type: 'boolean', example: true },
           createdAt: {
             type: 'string',
             format: 'date-time',
@@ -405,7 +188,7 @@ export function ApiGetChallenge() {
       },
     }),
     ApiResponse(
-      createErrorResponse('CHALLENGE_003', '챌린지를 찾을 수 없습니다.', 404),
+      createErrorResponse('CHALLENGE_001', '챌린지를 찾을 수 없습니다.', 404),
     ),
     ApiResponse(CommonErrorResponses.InternalServerError),
   );
@@ -527,6 +310,49 @@ export function ApiUpdateChallenge() {
     ApiResponse({
       status: 404,
       description: '챌린지를 찾을 수 없음',
+    }),
+  );
+}
+
+export function ApiGetRecentChallenges() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '최근 생성된 챌린지 조회',
+      description: '최근 일주일 내에 생성된 챌린지 중 최대 15개를 조회합니다.',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '챌린지 조회 성공',
+      schema: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            challengeUuid: { type: 'string', example: '01HZQK5J8X...' },
+            title: { type: 'string', example: '하루 만보 챌린지' },
+            type: { type: 'string', example: 'NORMAL' },
+            gender: { type: 'string', example: 'ALL' },
+            profile: {
+              type: 'string',
+              example: 'https://example.com/image.jpg',
+            },
+            startDate: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-07-01T00:00:00Z',
+            },
+            endDate: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-07-31T00:00:00Z',
+            },
+            isStarted: { type: 'boolean', example: false },
+            isFinished: { type: 'boolean', example: false },
+            currentMember: { type: 'number', example: 12 },
+            maxMember: { type: 'number', example: 50 },
+          },
+        },
+      },
     }),
   );
 }

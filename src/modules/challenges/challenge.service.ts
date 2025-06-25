@@ -37,6 +37,16 @@ export class ChallengeService {
     const now = new Date();
     const startDate = new Date(createChallengeDto.start_date);
     const endDate = new Date(createChallengeDto.end_date);
+    const user = await this.userRepository.findOne({ where: { userUuid } });
+
+    if (user.coins - createChallengeDto.coin_amount < 0) {
+      CustomException.throw(
+        ErrorCode.INSUFFICIENT_COINS,
+        '챌린지를 생성할 코인이 부족합니다.',
+      );
+    }
+
+    user.coins = user.coins - createChallengeDto.coin_amount;
 
     // 시작일이 현재보다 과거
     if (startDate < now) {
@@ -85,6 +95,7 @@ export class ChallengeService {
     });
 
     await this.challengeRepository.save(challenge);
+    await this.userRepository.save(user);
     return {
       message: '챌린지가 성공적으로 생성되었습니다.',
       challengeUuid: challenge.challengeUuid,

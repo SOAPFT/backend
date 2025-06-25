@@ -12,14 +12,12 @@ import {
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { FindAllChallengesDto } from './dto/find-all-challenges.dto';
-import { JoinChallengeDto } from './dto/join-challenge.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ApiCreateChallenge,
   ApiGetAllChallenges,
   ApiGetChallenge,
   ApiUpdateChallenge,
-  ApiDeleteChallenge,
   ApiJoinChallenge,
   ApiGetUserChallenges,
   ApiLeaveChallenge,
@@ -85,6 +83,17 @@ export class ChallengeController {
   }
 
   /**
+   * 인기있는 챌린지 목록
+   * @returns 최근 생성된 챌린지 목록
+   */
+
+  @Get('recent')
+  @ApiGetRecentChallenges()
+  getPopularChallenges() {
+    return this.challengeService.getRecentChallenges();
+  }
+
+  /**
    * 챌린지 상세 조회
    * @param challengeId 챌린지 ID
    * @param userUuid 현재 로그인한 사용자의 UUID
@@ -121,22 +130,8 @@ export class ChallengeController {
   }
 
   /**
-   * 챌린지 삭제
-   * @param challengeId 챌린지 ID
-   * @param userUuid 현재 로그인한 사용자의 UUID
-   */
-  @Delete(':challengeId')
-  @ApiDeleteChallenge()
-  remove(
-    @Param('challengeId') challengeId: string,
-    @UserUuid() userUuid: string,
-  ) {
-    return this.challengeService.deleteChallenge(+challengeId, userUuid);
-  }
-
-  /**
    * 챌린지 참여
-   * @param challengeId 챌린지 ID
+   * @param challengeUuid 챌린지 Uuid
    * @param joinChallengeDto 참여 정보
    * @param userUuid 현재 로그인한 사용자의 UUID
    * @returns 참여된 챌린지 정보
@@ -144,15 +139,10 @@ export class ChallengeController {
   @Post(':challengeId/join')
   @ApiJoinChallenge()
   joinChallenge(
-    @Param('challengeId') challengeId: string,
-    @Body() joinChallengeDto: JoinChallengeDto,
+    @Param('challengeUuid') challengeUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return this.challengeService.joinChallenge(
-      +challengeId,
-      userUuid,
-      joinChallengeDto.password,
-    );
+    return this.challengeService.joinChallenge(challengeUuid, userUuid);
   }
 
   /**

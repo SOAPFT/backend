@@ -198,70 +198,104 @@ export function ApiJoinChallenge() {
   return applyDecorators(
     ApiOperation({
       summary: '챌린지 참여',
-      description: '챌린지에 참여합니다. 코인이 차감됩니다.',
+      description: '사용자가 챌린지에 참여하고 코인을 차감합니다.',
     }),
-    ApiBearerAuth(),
     ApiParam({
       name: 'challengeUuid',
-      description: '챌린지 UUID',
-      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+      required: true,
+      description: '참여할 챌린지의 UUID',
+      example: '01HZQK5J8XABCDEF1234567890',
     }),
     ApiResponse({
-      status: 200,
       description: '챌린지 참여 성공',
       schema: {
         type: 'object',
         properties: {
-          message: {
-            type: 'string',
-            example: '챌린지에 참여했습니다.',
-          },
+          message: { type: 'string', example: '참가 완료' },
           challengeUuid: {
             type: 'string',
-            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-          },
-          userUuid: {
-            type: 'string',
-            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-          },
-          coinUsed: {
-            type: 'number',
-            example: 1000,
-          },
-          remainingCoins: {
-            type: 'number',
-            example: 4000,
+            example: '01HZQK5J8XABCDEF1234567890',
           },
         },
       },
     }),
-    ApiResponse(
-      createErrorResponse(
-        'CHALLENGE_006',
-        '참여 조건을 만족하지 않습니다.',
-        400,
-      ),
-    ),
-    ApiResponse(
-      createErrorResponse('CHALLENGE_004', '챌린지 정원이 가득 찼습니다.', 400),
-    ),
-    ApiResponse(
-      createErrorResponse('CHALLENGE_005', '이미 참여 중인 챌린지입니다.', 400),
-    ),
-    ApiResponse(
-      createErrorResponse(
-        'CHALLENGE_007',
-        '챌린지가 이미 시작되었습니다.',
-        400,
-      ),
-    ),
-    ApiResponse(createErrorResponse('COIN_001', '코인이 부족합니다.', 400)),
-    ApiResponse(CommonAuthResponses.Unauthorized),
-    ApiResponse(
-      createErrorResponse('CHALLENGE_003', '챌린지를 찾을 수 없습니다.', 404),
-    ),
-    ApiResponse(CommonErrorResponses.ValidationFailed),
-    ApiResponse(CommonErrorResponses.InternalServerError),
+    ApiResponse({
+      status: 402,
+      description: '코인이 부족하여 참여 불가',
+      schema: {
+        example: {
+          errorCode: 'INSUFFICIENT_COINS',
+          message: '챌린지를 생성할 코인이 부족합니다.',
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: '챌린지가 존재하지 않음',
+      schema: {
+        example: {
+          errorCode: 'CHALLENGE_001',
+          message: '해당 아이디의 챌린지가 없습니다.',
+        },
+      },
+    }),
+    ApiResponse({
+      status: 409,
+      description: '중복 참가, 조건 미달 등으로 인한 챌린지 참여 실패',
+      content: {
+        'application/json': {
+          examples: {
+            AlreadyStarted: {
+              summary: '이미 시작된 챌린지',
+              value: {
+                errorCode: 'CHALLENGE_002',
+                message: '이미 시작된 챌린지입니다.',
+              },
+            },
+            AlreadyFinished: {
+              summary: '이미 종료된 챌린지',
+              value: {
+                errorCode: 'CHALLENGE_003',
+                message: '이미 종료된 챌린지 입니다.',
+              },
+            },
+            ChallengeFull: {
+              summary: '정원이 다 찼을 경우',
+              value: {
+                errorCode: 'CHALLENGE_004',
+                message: '정원이 다 찼습니다.',
+              },
+            },
+            AlreadyJoined: {
+              summary: '이미 참가한 경우',
+              value: {
+                errorCode: 'CHALLENGE_006',
+                message: '이미 참가한 챌린지 입니다.',
+              },
+            },
+            AgeNotMet: {
+              summary: '연령 조건 불충족',
+              value: {
+                errorCode: 'CHALLENGE_011',
+                message: '참여 가능한 연령 조건을 만족하지 않습니다.',
+              },
+            },
+            GenderNotMet: {
+              summary: '성별 조건 불충족',
+              value: {
+                errorCode: 'CHALLENGE_012',
+                message: '성별 조건을 만족하지 않습니다.',
+              },
+            },
+          },
+        },
+      },
+    }),
+
+    ApiResponse({
+      status: 500,
+      description: '서버 내부 오류',
+    }),
   );
 }
 
@@ -353,47 +387,6 @@ export function ApiGetRecentChallenges() {
           },
         },
       },
-    }),
-  );
-}
-
-export function ApiDeleteChallenge() {
-  return applyDecorators(
-    ApiOperation({
-      summary: '챌린지 삭제',
-      description:
-        '챌린지 생성자만 삭제할 수 있습니다. 시작된 챌린지는 삭제할 수 없습니다.',
-    }),
-    ApiBearerAuth(),
-    ApiParam({
-      name: 'challengeUuid',
-      description: '챌린지 UUID',
-      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-    }),
-    ApiResponse({
-      status: 200,
-      description: '챌린지 삭제 성공',
-      schema: {
-        type: 'object',
-        properties: {
-          message: {
-            type: 'string',
-            example: '챌린지가 삭제되었습니다.',
-          },
-        },
-      },
-    }),
-    ApiResponse({
-      status: 401,
-      description: '인증되지 않은 사용자',
-    }),
-    ApiResponse({
-      status: 403,
-      description: '삭제 권한 없음 또는 시작된 챌린지',
-    }),
-    ApiResponse({
-      status: 404,
-      description: '챌린지를 찾을 수 없음',
     }),
   );
 }

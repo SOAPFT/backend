@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Challenge } from '@/entities/challenge.entity';
@@ -217,23 +212,99 @@ export class ChallengeService {
   }
 
   /**
-   * 챌린지 삭제
+   * 인기 챌린지 목록
    */
-  async deleteChallenge(challengeId: number, userUuid: string) {
-    // TODO: 챌린지 삭제 로직 구현
-    throw new Error('Method not implemented.');
+
+  async getPopularChallenges() {
+    return;
   }
 
   /**
    * 챌린지 참여
    */
-  async joinChallenge(
-    challengeId: number,
-    userUuid: string,
-    password?: string,
-  ) {
+  async joinChallenge(challengeUuid: string, userUuid: string) {
     // TODO: 챌린지 참여 로직 구현
-    throw new Error('Method not implemented.');
+    const challenge = await this.challengeRepository.findOne({
+      where: { challengeUuid },
+    });
+    const user = await this.userRepository.findOne({
+      where: {
+        userUuid,
+      },
+    });
+
+    const now = new Date();
+    const startDate = new Date(challenge.startDate);
+    const endDate = new Date(challenge.endDate);
+
+    if (!challenge) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_FOUND,
+        '해당 아이디의 챌린지가 없습니다.',
+      );
+    }
+
+    if (
+      challenge.gender !== GenderType.NONE &&
+      challenge.gender !== user.gender
+    ) {
+      CustomException.throw(
+        ErrorCode.GENDER_RESTRICTION_NOT_MET,
+        '성별 조건을 만족하지 않습니다.',
+      );
+    }
+
+    if (!(challenge.startAge <= user.age && user.age <= challenge.endAge)) {
+      CustomException.throw(
+        ErrorCode.AGE_RESTRICTION_NOT_MET,
+        '참여 가능한 연력 조건을 만족하지 않습니다.',
+      );
+    }
+
+    if (challenge.maxMember === challenge.participantUuid.length) {
+      CustomException.throw(ErrorCode.CHALLENGE_FULL, '정원이 다 찼습니다.');
+    }
+
+    const isAlreadyParticipant = challenge.participantUuid.find(
+      (uuid) => uuid === userUuid,
+    );
+
+    if (isAlreadyParticipant) {
+      CustomException.throw(
+        ErrorCode.ALREADY_JOINED_CHALLENGE,
+        '이미 참가한 챌린지 입니다.',
+      );
+    }
+
+    if (user.coins - challenge.coinAmount < 0) {
+      CustomException.throw(
+        ErrorCode.INSUFFICIENT_COINS,
+        '챌린지를 생성할 코인이 부족합니다.',
+      );
+    }
+
+    if (endDate < now) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_ALREADY_FINISHED,
+        '이미 종료된 챌린지 입니다.',
+      );
+    } else if (startDate < now) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_ALREADY_STARTED,
+        '이미 시작된 챌린지입니다.',
+      );
+    }
+
+    user.coins = user.coins - challenge.coinAmount;
+    challenge.participantUuid.push(userUuid);
+
+    await this.challengeRepository.save(challenge);
+    await this.userRepository.save(user);
+
+    return {
+      message: '참가 완료',
+      challengeUuid,
+    };
   }
 
   /**

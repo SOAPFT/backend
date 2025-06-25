@@ -1,7 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsNumber, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ChallengeType, GenderType } from '@/types/challenge.enum';
+import {
+  ChallengeType,
+  GenderType,
+  ChallengeStatusType,
+} from '@/types/challenge.enum';
 
 export class FindAllChallengesDto {
   @ApiProperty({ description: '페이지 번호', default: 1, required: false })
@@ -33,4 +37,13 @@ export class FindAllChallengesDto {
   @IsOptional()
   @IsEnum(GenderType)
   gender?: GenderType;
+
+  @ApiProperty({
+    description: '챌린지 상태 필터',
+    enum: ChallengeStatusType,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(ChallengeStatusType)
+  status?: ChallengeStatusType;
 }

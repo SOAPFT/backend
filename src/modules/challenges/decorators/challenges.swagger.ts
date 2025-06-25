@@ -13,6 +13,7 @@ import {
   CommonErrorResponses,
 } from '../../../decorators/swagger.decorator';
 import { CreateChallengeDto } from '../dto/create-challenge.dto';
+import { GenderType, ChallengeType } from '@/types/challenge.enum';
 
 export function ApiCreateChallenge() {
   return applyDecorators(
@@ -48,7 +49,7 @@ export function ApiGetAllChallenges() {
   return applyDecorators(
     ApiOperation({
       summary: '챌린지 목록 조회',
-      description: '모든 챌린지 목록을 조회합니다.',
+      description: '필터 및 페이지네이션 조건에 따라 챌린지 목록을 조회합니다.',
     }),
     ApiQuery({
       name: 'page',
@@ -65,16 +66,20 @@ export function ApiGetAllChallenges() {
     ApiQuery({
       name: 'type',
       required: false,
-      description: '챌린지 타입 필터',
-      enum: ['NORMAL', 'EVENT'],
-      example: 'NORMAL',
+      description: '챌린지 유형',
+      enum: ChallengeType,
+    }),
+    ApiQuery({
+      name: 'gender',
+      required: false,
+      description: '성별 필터',
+      enum: GenderType,
     }),
     ApiQuery({
       name: 'status',
       required: false,
-      description: '챌린지 상태 필터',
-      enum: ['recruiting', 'ongoing', 'finished'],
-      example: 'recruiting',
+      description: '챌린지 상태 (before | in_progress | finished)',
+      example: '',
     }),
     ApiResponse({
       status: 200,
@@ -82,80 +87,49 @@ export function ApiGetAllChallenges() {
       schema: {
         type: 'object',
         properties: {
-          challenges: {
+          data: {
             type: 'array',
             items: {
               type: 'object',
               properties: {
-                challengeUuid: {
-                  type: 'string',
-                  example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-                },
-                title: { type: 'string', example: '30일 헬스 챌린지' },
+                challengeUuid: { type: 'string', example: '01HZQK5J8X...' },
+                title: { type: 'string', example: '하루 만보 챌린지' },
                 type: { type: 'string', example: 'NORMAL' },
+                gender: { type: 'string', example: 'ALL' },
                 profile: {
                   type: 'string',
-                  example: 'https://example.com/profile.jpg',
-                },
-                banner: {
-                  type: 'string',
-                  example: 'https://example.com/banner.jpg',
-                },
-                introduce: {
-                  type: 'string',
-                  example: '매일 헬스장에서 운동하고 인증하는 챌린지입니다!',
+                  example: 'https://example.com/image.jpg',
                 },
                 startDate: {
                   type: 'string',
-                  format: 'date',
-                  example: '2025-07-01',
+                  format: 'date-time',
+                  example: '2025-07-01T00:00:00Z',
                 },
                 endDate: {
                   type: 'string',
-                  format: 'date',
-                  example: '2025-07-31',
+                  format: 'date-time',
+                  example: '2025-07-31T00:00:00Z',
                 },
-                goal: { type: 'number', example: 5 },
-                maxMember: { type: 'number', example: 50 },
-                currentMember: { type: 'number', example: 25 },
-                coinAmount: { type: 'number', example: 1000 },
                 isStarted: { type: 'boolean', example: false },
                 isFinished: { type: 'boolean', example: false },
-                creator: {
-                  type: 'object',
-                  properties: {
-                    userUuid: {
-                      type: 'string',
-                      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-                    },
-                    nickname: { type: 'string', example: '챌린지마스터' },
-                    profileImage: {
-                      type: 'string',
-                      example: 'https://example.com/profile.jpg',
-                    },
-                  },
-                },
-                createdAt: {
-                  type: 'string',
-                  format: 'date-time',
-                  example: '2025-06-22T12:00:00Z',
-                },
+                currentMember: { type: 'number', example: 12 },
+                maxMember: { type: 'number', example: 50 },
               },
             },
           },
-          pagination: {
+          meta: {
             type: 'object',
             properties: {
-              currentPage: { type: 'number', example: 1 },
-              totalPages: { type: 'number', example: 5 },
-              totalItems: { type: 'number', example: 50 },
-              itemsPerPage: { type: 'number', example: 10 },
+              total: { type: 'number', example: 123 },
+              page: { type: 'number', example: 1 },
+              limit: { type: 'number', example: 10 },
+              totalPages: { type: 'number', example: 13 },
+              hasNextPage: { type: 'boolean', example: true },
             },
           },
         },
       },
     }),
-    ApiResponse(CommonErrorResponses.InternalServerError),
   );
 }
 

@@ -12,9 +12,11 @@ import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { FindAllChallengesDto } from './dto/find-all-challenges.dto';
 import { User } from '@/entities/user.entity';
 import { ulid } from 'ulid';
-import { ChallengeType } from '@/types/challenge.enum';
+import { ChallengeType, GenderType } from '@/types/challenge.enum';
 import { CustomException } from '@/utils/custom-exception';
 import { ErrorCode } from '@/types/error-code.enum';
+import { MoreThan, LessThan } from 'typeorm';
+
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -94,7 +96,47 @@ export class ChallengeService {
    */
   async findAllChallenges(findAllChallengesDto: FindAllChallengesDto) {
     // TODO: 챌린지 목록 조회 로직 구현
-    throw new Error('Method not implemented.');
+    const {
+      page = 1,
+      limit = 10,
+      type,
+      gender = GenderType.NONE,
+      status,
+    } = findAllChallengesDto;
+
+    const where: Record<string, any> = {};
+
+    if (type) where.type = type;
+    if (gender) where.gender = gender;
+
+    const now = new Date();
+
+    if (status === 'before') {
+      where.startDate = MoreThan(now);
+    } else if (status === 'in_progress') {
+      where.startDate = LessThan(now);
+      where.endDate = MoreThan(now);
+    } else if (status === 'completed') {
+      where.endDate = LessThan(now);
+    }
+
+    const [challenges, total] = await this.challengeRepository.findAndCount({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: challenges,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+      },
+    };
   }
 
   /**

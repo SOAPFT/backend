@@ -79,9 +79,9 @@ jobs:
             npm ci --production
             
             # PM2 서비스 재시작/시작
-            pm2 stop ssuled-api || true
-            pm2 delete ssuled-api || true
-            NODE_ENV=production pm2 start dist/src/main.js --name ssuled-api
+            pm2 stop soapft-api || true
+            pm2 delete soapft-api || true
+            NODE_ENV=production pm2 start dist/src/main.js --name soapft-api
             
             # PM2 설정 저장
             pm2 save

@@ -6,7 +6,6 @@ import { SocialRequest } from './auth.controller';
 import { Request, Response } from 'express';
 import { UsersService } from '@/modules/users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { customAlphabet } from 'nanoid';
 import axios from 'axios';
 import * as bcrypt from 'bcryptjs';
 import { SocialProvider } from '@/types/social-provider.enum';
@@ -19,6 +18,7 @@ import { JwtPayload } from './dto/oauth-apple.dto';
 import { ulid } from 'ulid';
 import { ErrorCode } from '@/types/error-code.enum';
 import { CustomException } from '@/utils/custom-exception';
+import { generateNickname } from 'starving-orange';
 
 @Injectable()
 export class AuthService {
@@ -33,6 +33,73 @@ export class AuthService {
     const expiresIn = process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || '14d';
     return typeof expiresIn === 'string' ? ms(expiresIn) : parseInt(expiresIn);
   }
+
+  /**
+   * 중복되지 않는 닉네임 생성
+   * @returns 고유한 닉네임
+   */
+  private async generateUniqueNickname(): Promise<string> {
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (attempts < maxAttempts) {
+      try {
+        // starving-orange 라이브러리로 닉네임 생성
+        const generatedNickname = generateNickname();
+        const existingUser = await this.userService.findOneByNickname(
+          generatedNickname.nickname,
+        );
+
+        if (!existingUser) {
+          return generatedNickname.nickname;
+        }
+      } catch (error) {
+        console.error('starving-orange 라이브러리 오류:', error);
+        // fallback으로 수동 닉네임 생성
+        break;
+      }
+
+      attempts++;
+    }
+
+    // 최대 시도 횟수 도달 시 또는 라이브러리 오류 시 fallback 닉네임 생성
+    const adjectives = [
+      '귀여운',
+      '멋진',
+      '행복한',
+      '즐거운',
+      '신나는',
+      '사랑스러운',
+      '용감한',
+      '친절한',
+      '배고픈',
+      '달콤한',
+      '상냥한',
+    ];
+    const nouns = [
+      '토마토',
+      '바나나',
+      '사과',
+      '오렌지',
+      '포도',
+      '딸기',
+      '배',
+      '복숭아',
+      '귤',
+      '한라봉',
+      '두리안',
+      '코코넛',
+      '브로콜리',
+    ];
+
+    const randomAdjective =
+      adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+    const timestamp = Date.now().toString().slice(-4);
+
+    return `${randomAdjective} ${randomNoun}_${timestamp}`;
+  }
+
   private async handleSocialLogin(
     user: SocialRequest['user'],
     deviceInfo: { deviceId?: string; deviceType?: string; appVersion?: string },
@@ -111,7 +178,8 @@ export class AuthService {
 
       const kakaoUser = userResponse.data;
 
-      const randomId = customAlphabet('0123456789', 3);
+      // starving-orange로 고유한 닉네임 생성
+      const uniqueNickname = await this.generateUniqueNickname();
 
       console.log(kakaoUser);
       console.log(body);
@@ -119,7 +187,7 @@ export class AuthService {
       const user = {
         socialId: kakaoUser.id.toString(),
         socialNickname: kakaoUser.kakao_account?.profile.nickname || '',
-        nickname: `익명_${randomId()}`,
+        nickname: uniqueNickname,
         profileImage: kakaoUser.kakao_account?.profile.profile_image_url || '',
         socialProvider: SocialProvider.KAKAO,
         pushToken: body.pushToken || null,
@@ -153,12 +221,14 @@ export class AuthService {
       });
 
       const profile = userRes.data.response;
-      const randomId = customAlphabet('0123456789', 4);
+
+      // starving-orange로 고유한 닉네임 생성
+      const uniqueNickname = await this.generateUniqueNickname();
 
       const user = {
         socialId: profile.id,
         socialNickname: profile.nickname || '',
-        nickname: `익명_${randomId()}`,
+        nickname: uniqueNickname,
         profileImage: profile.profile_image || '',
         socialProvider: SocialProvider.NAVER,
         pushToken: body.pushToken || null,
@@ -207,12 +277,13 @@ export class AuthService {
       const appleUserId = payload.sub;
       const email = payload.email || '';
 
-      const randomId = customAlphabet('0123456789', 4);
+      // starving-orange로 고유한 닉네임 생성
+      const uniqueNickname = await this.generateUniqueNickname();
 
       const user = {
         socialId: appleUserId,
         socialNickname: email, // Apple은 닉네임 안 줘서 이메일 등으로 대체
-        nickname: `익명_${randomId()}`,
+        nickname: uniqueNickname,
         profileImage: null, // Apple은 이미지 정보 없음
         socialProvider: SocialProvider.APPLE,
         pushToken: body.pushToken || null,

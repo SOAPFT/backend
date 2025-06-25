@@ -78,13 +78,13 @@ export class ChallengeController {
    * @param userUuid 현재 로그인한 사용자의 UUID
    * @returns 챌린지 상세 정보
    */
-  @Get(':challengeId')
+  @Get(':challengeUuid')
   @ApiGetChallenge()
   findOne(
-    @Param('challengeId') challengeId: string,
+    @Param('challengeUuid') challengeUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return this.challengeService.findOneChallenge(+challengeId, userUuid);
+    return this.challengeService.findOneChallenge(challengeUuid, userUuid);
   }
 
   /**

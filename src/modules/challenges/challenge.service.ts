@@ -67,15 +67,15 @@ export class ChallengeService {
       profile: createChallengeDto.profile,
       banner: createChallengeDto.banner,
       introduce: createChallengeDto.introduce,
-      startDate: createChallengeDto.start_date,
-      endDate: createChallengeDto.end_date,
+      startDate,
+      endDate,
       goal: createChallengeDto.goal,
       startAge: createChallengeDto.start_age,
       endAge: createChallengeDto.end_age,
       gender: createChallengeDto.gender,
       maxMember: createChallengeDto.max_member,
       creatorUuid: userUuid,
-      participantUuid: [],
+      participantUuid: [userUuid],
       coinAmount: createChallengeDto.coin_amount,
       isStarted: false,
       isFinished: false,
@@ -84,10 +84,8 @@ export class ChallengeService {
 
     await this.challengeRepository.save(challenge);
     return {
-      message: '챌린지 생성 성공',
-      data: {
-        challengeId: challenge.challengeUuid,
-      },
+      message: '챌린지가 성공적으로 생성되었습니다.',
+      challengeUuid: challenge.challengeUuid,
     };
   }
 
@@ -102,16 +100,21 @@ export class ChallengeService {
   /**
    * 챌린지 상세 조회
    */
-  async findOneChallenge(challengeId: number, userUuid: string) {
+  async findOneChallenge(challengeUuid: string, userUuid: string) {
     const challenge = await this.challengeRepository.findOne({
-      where: { id: challengeId },
+      where: { challengeUuid },
     });
 
     if (!challenge) {
-      throw new NotFoundException('해당 ID의 챌린지를 찾을 수 없습니다.');
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_FOUND,
+        '해당 아이디의 챌린지가 없습니다.',
+      );
     }
 
-    return challenge;
+    const isParticipated = challenge.participantUuid.includes(userUuid);
+
+    return { ...challenge, isParticipated };
   }
 
   /**

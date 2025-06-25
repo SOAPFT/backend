@@ -1,4 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+} from 'typeorm';
 import { ChallengeType, GenderType } from '@/types/challenge.enum';
 
 @Entity('challenge')
@@ -83,12 +88,16 @@ export class Challenge {
   isFinished: boolean;
 
   /** 챌린지 성공한 참여자 ULID 배열 */
-  @Column({ name: 'success_participants_uuid', type: 'varchar', array: true })
+  @Column({
+    name: 'success_participants_uuid',
+    type: 'varchar',
+    array: true,
+  })
   successParticipantsUuid: string[];
 
-  @Column({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @Column({ name: 'updated_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

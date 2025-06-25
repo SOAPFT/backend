@@ -314,6 +314,49 @@ export function ApiUpdateChallenge() {
   );
 }
 
+export function ApiGetRecentChallenges() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '최근 생성된 챌린지 조회',
+      description: '최근 일주일 내에 생성된 챌린지 중 최대 15개를 조회합니다.',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '챌린지 조회 성공',
+      schema: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            challengeUuid: { type: 'string', example: '01HZQK5J8X...' },
+            title: { type: 'string', example: '하루 만보 챌린지' },
+            type: { type: 'string', example: 'NORMAL' },
+            gender: { type: 'string', example: 'ALL' },
+            profile: {
+              type: 'string',
+              example: 'https://example.com/image.jpg',
+            },
+            startDate: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-07-01T00:00:00Z',
+            },
+            endDate: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-07-31T00:00:00Z',
+            },
+            isStarted: { type: 'boolean', example: false },
+            isFinished: { type: 'boolean', example: false },
+            currentMember: { type: 'number', example: 12 },
+            maxMember: { type: 'number', example: 50 },
+          },
+        },
+      },
+    }),
+  );
+}
+
 export function ApiDeleteChallenge() {
   return applyDecorators(
     ApiOperation({

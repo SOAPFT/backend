@@ -23,6 +23,7 @@ import {
   ApiJoinChallenge,
   ApiGetUserChallenges,
   ApiLeaveChallenge,
+  ApiGetRecentChallenges,
 } from './decorators/challenges.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
@@ -106,6 +107,18 @@ export class ChallengeController {
       updateChallengeDto,
       userUuid,
     );
+  }
+
+  /**
+   * 최근 생성된 챌린지 목록
+   * @param userUuid 현재 로그인한 사용자의 UUID
+   * @returns 최근 생성된 챌린지 목록
+   */
+
+  @Get('/recent')
+  @ApiGetRecentChallenges()
+  getRecentChallenges() {
+    return this.challengeService.getRecentChallenges();
   }
 
   /**

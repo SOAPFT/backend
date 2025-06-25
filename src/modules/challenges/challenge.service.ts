@@ -15,7 +15,8 @@ import { ulid } from 'ulid';
 import { ChallengeType, GenderType } from '@/types/challenge.enum';
 import { CustomException } from '@/utils/custom-exception';
 import { ErrorCode } from '@/types/error-code.enum';
-import { MoreThan, LessThan } from 'typeorm';
+import { MoreThan, LessThan, MoreThanOrEqual } from 'typeorm';
+import { subDays } from 'date-fns';
 
 @Injectable()
 export class ChallengeService {
@@ -79,6 +80,7 @@ export class ChallengeService {
       profile: createChallengeDto.profile,
       banner: createChallengeDto.banner,
       introduce: createChallengeDto.introduce,
+      verificationGuide: createChallengeDto.verificationGuide,
       startDate,
       endDate,
       goal: createChallengeDto.goal,
@@ -192,6 +194,26 @@ export class ChallengeService {
   ) {
     // TODO: 챌린지 수정 로직 구현
     throw new Error('Method not implemented.');
+  }
+
+  /**
+   * 최근 생성된 챌린지 목록
+   */
+
+  async getRecentChallenges() {
+    const onWeekAgo = subDays(new Date(), 7);
+
+    const challenges = await this.challengeRepository.find({
+      where: {
+        createdAt: MoreThanOrEqual(onWeekAgo),
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+      take: 15,
+    });
+
+    return challenges;
   }
 
   /**

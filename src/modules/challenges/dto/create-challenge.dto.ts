@@ -23,6 +23,14 @@ export class CreateChallengeDto {
   introduce: string;
 
   @ApiProperty({
+    description: '챌린지 인증 방법',
+    example: '6시 전에 일어나서 인증샷!!',
+  })
+  @IsString()
+  @IsOptional()
+  verificationGuide?: string;
+
+  @ApiProperty({
     description: '시작 일자',
     example: '2025-07-01T00:00:00.000Z',
   })

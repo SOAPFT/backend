@@ -37,6 +37,10 @@ export class Challenge {
   @Column({ name: 'introduce', type: 'text' })
   introduce: string;
 
+  /** 챌린지 인증 방법 */
+  @Column({ name: 'verificationGuide', type: 'text', nullable: true })
+  verificationGuide: string;
+
   @Column({ name: 'start_date', type: 'timestamptz' })
   startDate: Date;
 

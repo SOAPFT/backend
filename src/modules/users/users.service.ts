@@ -25,6 +25,10 @@ export class UsersService {
     return this.userRepository.findOneBy({ socialId });
   }
 
+  findOneByNickname(nickname: string) {
+    return this.userRepository.findOneBy({ nickname });
+  }
+
   createUser(user, uuid): Promise<User> {
     const newUser = this.userRepository.create({
       userUuid: uuid,

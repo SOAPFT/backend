@@ -17,7 +17,7 @@ import {
   ApiRefreshToken,
   ApiTestAuth,
 } from './decorators/auth.swagger';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { DevLoginDto, SocialLoginDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
@@ -80,6 +80,17 @@ export class AuthController {
       message: '인증 성공',
       userUuid,
       timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('test-nickname')
+  @ApiOperation({ summary: '닉네임 생성 테스트' })
+  async testNickname() {
+    // 임시로 generateUniqueNickname 메서드를 public으로 호출
+    const nickname = await (this.authService as any).generateUniqueNickname();
+    return {
+      message: '닉네임 생성 성공',
+      nickname: nickname,
     };
   }
 }

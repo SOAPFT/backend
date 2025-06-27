@@ -54,6 +54,7 @@ export enum ErrorCode {
   CHALLENGE_CREATOR_CANNOT_LEAVE = 'CHALLENGE_010',
   AGE_RESTRICTION_NOT_MET = 'CHALLENGE_011',
   GENDER_RESTRICTION_NOT_MET = 'CHALLENGE_012',
+  CHALLENGE_CANNOT_EDIT = 'CHALLENGE_013',
 
   // === 인증글 (Posts) ===
   POST_NOT_FOUND = 'POST_001',
@@ -377,6 +378,11 @@ export const ERROR_CODE_INFO: Record<ErrorCode, ErrorCodeInfo> = {
   [ErrorCode.POST_EDIT_TIME_EXPIRED]: {
     code: 'POST_007',
     message: '인증글 수정 시간이 만료되었습니다.',
+    httpStatus: HttpStatus.BAD_REQUEST,
+  },
+  [ErrorCode.CHALLENGE_CANNOT_EDIT]: {
+    code: 'CHALLENGE_013',
+    message: '챌린지 생성자는 수정할 수 없습니다.',
     httpStatus: HttpStatus.BAD_REQUEST,
   },
 

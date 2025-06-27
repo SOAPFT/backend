@@ -127,15 +127,15 @@ export class ChallengeController {
    * @param userUuid 현재 로그인한 사용자의 UUID
    * @returns 수정된 챌린지 정보
    */
-  @Patch(':challengeId')
+  @Patch(':challengeUuid')
   @ApiUpdateChallenge()
   update(
-    @Param('challengeId') challengeId: string,
+    @Param('challengeUuid') challengeUuid: string,
     @Body() updateChallengeDto: UpdateChallengeDto,
     @UserUuid() userUuid: string,
   ) {
     return this.challengeService.updateChallenge(
-      +challengeId,
+      challengeUuid,
       updateChallengeDto,
       userUuid,
     );

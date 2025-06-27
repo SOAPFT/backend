@@ -185,7 +185,9 @@ export class ChallengeService {
   async countUserCompletedChallenges(userUuid: string) {
     const count = await this.challengeRepository
       .createQueryBuilder('challenge')
-      .where(':userUuid = ANY(challenge.successParticipantsUuid)', { userUuid })
+      .where(':userUuid =뭐 ANY(challenge.successParticipantsUuid)', {
+        userUuid,
+      })
       .getCount();
 
     return {
@@ -198,12 +200,37 @@ export class ChallengeService {
    * 챌린지 수정
    */
   async updateChallenge(
-    challengeId: number,
+    challengeUuid: string,
     updateChallengeDto: UpdateChallengeDto,
     userUuid: string,
   ) {
-    // TODO: 챌린지 수정 로직 구현
-    throw new Error('Method not implemented.');
+    const challenge = await this.challengeRepository.findOne({
+      where: { challengeUuid },
+    });
+
+    if (!challenge) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_FOUND,
+        '해당 아이디의 챌린지가 없습니다.',
+      );
+    }
+
+    if (challenge.creatorUuid !== userUuid) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_CANNOT_EDIT,
+        '챌린지를 수정할 권한이 없습니다.',
+      );
+    }
+
+    challenge.title = updateChallengeDto.title;
+    challenge.introduce = updateChallengeDto.introduce;
+
+    await this.challengeRepository.save(challenge);
+
+    return {
+      message: '챌린지 수정을 성공했습니다.',
+      challenge,
+    };
   }
 
   /**

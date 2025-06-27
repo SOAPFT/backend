@@ -320,6 +320,15 @@ export class ChallengeService {
         '해당 아이디의 챌린지가 없습니다.',
       );
     }
+
+    const now = new Date();
+    if (challenge.startDate <= now) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_ALREADY_STARTED,
+        '챌린지가 시작되어 나갈 수 없습니다.',
+      );
+    }
+
     challenge.participantUuid = challenge.participantUuid.filter(
       (participantUuid) => participantUuid !== userUuid,
     );

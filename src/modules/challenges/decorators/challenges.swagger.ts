@@ -479,60 +479,46 @@ export function ApiLeaveChallenge() {
   return applyDecorators(
     ApiOperation({
       summary: '챌린지 탈퇴',
-      description: '사용자가 참여 중인 챌린지에서 탈퇴합니다.',
+      description: '사용자가 특정 챌린지에서 탈퇴합니다.',
     }),
-    ApiBearerAuth(),
     ApiParam({
-      name: 'challengeId',
-      description: '탈퇴할 챌린지 ID',
-      type: 'number',
-      example: 1,
+      name: 'challengeUuid',
+      type: 'string',
+      description: '탈퇴할 챌린지의 UUID',
+      required: true,
     }),
     ApiResponse({
       status: 200,
-      description: '챌린지 탈퇴 성공',
+      description: '탈퇴 성공',
       schema: {
-        type: 'object',
-        properties: {
-          success: {
-            type: 'boolean',
-            example: true,
-            description: '성공 여부',
-          },
-          message: {
-            type: 'string',
-            example: '챌린지에서 성공적으로 탈퇴했습니다.',
-            description: '응답 메시지',
-          },
-          data: {
-            type: 'object',
-            properties: {
-              challengeId: {
-                type: 'number',
-                example: 1,
-                description: '챌린지 ID',
-              },
-              refundedCoins: {
-                type: 'number',
-                example: 100,
-                description: '환불된 코인 수',
-              },
-            },
-          },
+        example: {
+          message: '챌린지에서 성공적으로 탈퇴했습니다.',
         },
       },
     }),
-    ApiResponse(CommonAuthResponses.Unauthorized),
-    ApiResponse(
-      createErrorResponse('CHALLENGE_007', '참여하지 않은 챌린지입니다.', 404),
-    ),
-    ApiResponse(
-      createErrorResponse(
-        'CHALLENGE_008',
-        '이미 시작된 챌린지는 탈퇴할 수 없습니다.',
-        400,
-      ),
-    ),
-    ApiResponse(CommonErrorResponses.InternalServerError),
+    ApiResponse({
+      status: 403,
+      description: '이미 시작된 챌린지는 탈퇴 불가',
+      schema: {
+        example: {
+          statusCode: 403,
+          errorCode: 'CHALLENGE_002',
+          message: '챌린지가 시작되어 나갈 수 없습니다.',
+          error: 'Forbidden',
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: '챌린지를 찾을 수 없음',
+      schema: {
+        example: {
+          statusCode: 404,
+          errorCode: 'CHALLENGE_001',
+          message: '해당 아이디의 챌린지가 없습니다.',
+          error: 'Not Found',
+        },
+      },
+    }),
   );
 }

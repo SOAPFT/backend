@@ -223,7 +223,6 @@ export class ChallengeService {
    * 챌린지 참여
    */
   async joinChallenge(challengeUuid: string, userUuid: string) {
-    // TODO: 챌린지 참여 로직 구현
     const challenge = await this.challengeRepository.findOne({
       where: { challengeUuid },
     });
@@ -310,8 +309,25 @@ export class ChallengeService {
   /**
    * 챌린지 탈퇴
    */
-  async leaveChallenge(challengeId: number, userUuid: string) {
-    // TODO: 챌린지 탈퇴 로직 구현
-    throw new Error('Method not implemented.');
+  async leaveChallenge(challengeUuid: string, userUuid: string) {
+    const challenge = await this.challengeRepository.findOne({
+      where: { challengeUuid },
+    });
+
+    if (!challenge) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_FOUND,
+        '해당 아이디의 챌린지가 없습니다.',
+      );
+    }
+    challenge.participantUuid = challenge.participantUuid.filter(
+      (participantUuid) => participantUuid !== userUuid,
+    );
+
+    await this.challengeRepository.save(challenge);
+
+    return {
+      message: '챌린지에서 성공적으로 탈퇴했습니다.',
+    };
   }
 }

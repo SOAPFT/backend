@@ -154,9 +154,9 @@ export class ChallengeController {
   @Delete(':challengeId/leave')
   @ApiLeaveChallenge()
   leaveChallenge(
-    @Param('challengeId') challengeId: string,
+    @Param('challengeUuid') challengeUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return this.challengeService.leaveChallenge(+challengeId, userUuid);
+    return this.challengeService.leaveChallenge(challengeUuid, userUuid);
   }
 }

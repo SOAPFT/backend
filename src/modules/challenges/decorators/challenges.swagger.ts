@@ -473,6 +473,28 @@ export function ApiGetUserChallenges() {
 }
 
 /**
+ * 성공한 챌린지 수
+ */
+
+export function ApiGetUserCompletedChallengeCount() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '사용자가 성공한 챌린지 개수 조회',
+      description: '사용자가 완료한(성공한) 챌린지의 총 개수를 반환합니다.',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '성공적으로 조회됨',
+      schema: {
+        example: {
+          completedChallengeCount: 3,
+        },
+      },
+    }),
+  );
+}
+
+/**
  * 챌린지 탈퇴 API
  */
 export function ApiLeaveChallenge() {

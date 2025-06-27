@@ -180,6 +180,21 @@ export class ChallengeService {
   }
 
   /**
+   * 사용자가 성공한 챌린지 조회
+   */
+  async countUserCompletedChallenges(userUuid: string) {
+    const count = await this.challengeRepository
+      .createQueryBuilder('challenge')
+      .where(':userUuid = ANY(challenge.successParticipantsUuid)', { userUuid })
+      .getCount();
+
+    return {
+      message: '조회 성공',
+      completedChallengeCount: count,
+    };
+  }
+
+  /**
    * 챌린지 수정
    */
   async updateChallenge(

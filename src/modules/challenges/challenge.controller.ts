@@ -22,6 +22,7 @@ import {
   ApiGetUserChallenges,
   ApiLeaveChallenge,
   ApiGetRecentChallenges,
+  ApiGetUserCompletedChallengeCount,
 } from './decorators/challenges.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
@@ -43,6 +44,17 @@ export class ChallengeController {
   @ApiGetUserChallenges()
   getUserChallenges(@UserUuid() userUuid: string) {
     return this.challengeService.findUserChallenges(userUuid);
+  }
+
+  /**
+   * 사용자가 성공한 챌린지 조회
+   * @param userUuid 인증된 사용자 UUID
+   * @returns 사용자가 참여한 챌린지 정보
+   */
+  @Get('successful')
+  @ApiGetUserCompletedChallengeCount()
+  getUserCompletedChallengeCount(@UserUuid() userUuid: string) {
+    return this.challengeService.countUserCompletedChallenges(userUuid);
   }
 
   /**
@@ -87,7 +99,7 @@ export class ChallengeController {
    * @returns 최근 생성된 챌린지 목록
    */
 
-  @Get('recent')
+  @Get('popular')
   @ApiGetRecentChallenges()
   getPopularChallenges() {
     return this.challengeService.getRecentChallenges();
@@ -136,7 +148,7 @@ export class ChallengeController {
    * @param userUuid 현재 로그인한 사용자의 UUID
    * @returns 참여된 챌린지 정보
    */
-  @Post(':challengeId/join')
+  @Post(':challengeUuid/join')
   @ApiJoinChallenge()
   joinChallenge(
     @Param('challengeUuid') challengeUuid: string,

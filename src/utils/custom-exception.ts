@@ -236,4 +236,11 @@ export class BusinessException {
   static expiredToken(): never {
     CustomException.throw(ErrorCode.EXPIRED_TOKEN);
   }
+
+  // === 알림 관련 ===
+  static notificationNotFound(notificationId?: number): never {
+    CustomException.throw(ErrorCode.NOTIFICATION_NOT_FOUND, undefined, {
+      notificationId,
+    });
+  }
 }

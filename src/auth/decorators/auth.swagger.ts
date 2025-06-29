@@ -154,12 +154,12 @@ export function ApiDevToken() {
     ApiBody({
       schema: {
         type: 'object',
-        required: ['userId'],
+        required: ['userUuid'],
         properties: {
           userId: {
             type: 'number',
             description: '사용자 ID',
-            example: 1,
+            example: '01HZY2J4D6NH41P2S3RYVD0D3E',
           },
         },
       },

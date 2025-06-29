@@ -317,7 +317,6 @@ export function ApiUpdateChallenge() {
       schema: {
         type: 'object',
         properties: {
-          title: { type: 'string', example: '수정된 챌린지 제목' },
           profile: {
             type: 'string',
             example: 'https://example.com/new-profile.jpg',
@@ -326,7 +325,6 @@ export function ApiUpdateChallenge() {
             type: 'string',
             example: 'https://example.com/new-banner.jpg',
           },
-          introduce: { type: 'string', example: '수정된 챌린지 소개' },
         },
       },
     }),

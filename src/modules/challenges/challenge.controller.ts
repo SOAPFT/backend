@@ -12,7 +12,8 @@ import {
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { FindAllChallengesDto } from './dto/find-all-challenges.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ChallengeFilterType } from '@/types/challenge.enum';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   ApiCreateChallenge,
   ApiGetAllChallenges,
@@ -42,8 +43,12 @@ export class ChallengeController {
    */
   @Get('user')
   @ApiGetUserChallenges()
-  getUserChallenges(@UserUuid() userUuid: string) {
-    return this.challengeService.findUserChallenges(userUuid);
+  @ApiQuery({ name: 'status', enum: ChallengeFilterType, required: false })
+  getUserChallenges(
+    @UserUuid() userUuid: string,
+    @Query('status') status?: ChallengeFilterType,
+  ) {
+    return this.challengeService.findUserChallenges(userUuid, status);
   }
 
   /**

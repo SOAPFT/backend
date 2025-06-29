@@ -7,7 +7,11 @@ import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { FindAllChallengesDto } from './dto/find-all-challenges.dto';
 import { User } from '@/entities/user.entity';
 import { ulid } from 'ulid';
-import { ChallengeType, GenderType } from '@/types/challenge.enum';
+import {
+  ChallengeType,
+  GenderType,
+  ChallengeFilterType,
+} from '@/types/challenge.enum';
 import { CustomException } from '@/utils/custom-exception';
 import { ErrorCode } from '@/types/error-code.enum';
 import { MoreThan, LessThan, MoreThanOrEqual } from 'typeorm';
@@ -170,17 +174,28 @@ export class ChallengeService {
   /**
    * 사용자가 참여한 챌린지 조회
    */
-  async findUserChallenges(userUuid: string) {
-    const challenges = await this.challengeRepository
+  async findUserChallenges(userUuid: string, status: ChallengeFilterType) {
+    const qb = await this.challengeRepository
       .createQueryBuilder('challenge')
-      .where(':userUuid = ANY(challenge.participantUuid)', { userUuid })
-      .getMany();
+      .where(':userUuid = ANY(challenge.participantUuid)', { userUuid });
+
+    const now = new Date();
+
+    if (status === ChallengeFilterType.ONGOING) {
+      qb.andWhere('challenge.startDate <= :now AND challenge.endDate >= :now', {
+        now,
+      });
+    } else if (status === ChallengeFilterType.UPCOMING) {
+      qb.andWhere('challenge.startDate > :now', { now });
+    }
+
+    const challenges = await qb.getMany();
 
     return challenges;
   }
 
   /**
-   * 사용자가 성공한 챌린지 조회
+   * 사용자가 성공한 챌린지 수 조회
    */
   async countUserCompletedChallenges(userUuid: string) {
     const count = await this.challengeRepository

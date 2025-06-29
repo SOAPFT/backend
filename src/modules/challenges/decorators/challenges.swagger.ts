@@ -13,6 +13,7 @@ import {
   CommonErrorResponses,
 } from '../../../decorators/swagger.decorator';
 import { CreateChallengeDto } from '../dto/create-challenge.dto';
+import { ChallengeResponseDto } from '../dto/challenge-response.dto';
 import { GenderType, ChallengeType } from '@/types/challenge.enum';
 
 export function ApiCreateChallenge() {
@@ -541,6 +542,21 @@ export function ApiLeaveChallenge() {
           error: 'Not Found',
         },
       },
+    }),
+  );
+}
+
+export function ApiGetPopularChallenges() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '인기 챌린지 목록 조회',
+      description: '참여자 수가 가장 많은 상위 15개 챌린지를 반환합니다.',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '인기 챌린지 조회 성공',
+      type: ChallengeResponseDto,
+      isArray: true,
     }),
   );
 }

@@ -277,7 +277,14 @@ export class ChallengeService {
    */
 
   async getPopularChallenges() {
-    return;
+    const challenges = await this.challengeRepository
+      .createQueryBuilder('challenge')
+      .addSelect('CARDINALITY(challenge.participantUuid)', 'participantCount')
+      .orderBy('participantCount', 'DESC')
+      .limit(15)
+      .getMany();
+
+    return challenges;
   }
 
   /**

@@ -24,6 +24,7 @@ import {
   ApiLeaveChallenge,
   ApiGetRecentChallenges,
   ApiGetUserCompletedChallengeCount,
+  ApiGetPopularChallenges,
 } from './decorators/challenges.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
@@ -105,7 +106,7 @@ export class ChallengeController {
    */
 
   @Get('popular')
-  @ApiGetRecentChallenges()
+  @ApiGetPopularChallenges()
   getPopularChallenges() {
     return this.challengeService.getRecentChallenges();
   }

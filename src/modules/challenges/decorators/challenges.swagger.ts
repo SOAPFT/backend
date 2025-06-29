@@ -14,6 +14,7 @@ import {
 } from '../../../decorators/swagger.decorator';
 import { CreateChallengeDto } from '../dto/create-challenge.dto';
 import { ChallengeResponseDto } from '../dto/challenge-response.dto';
+import { ChallengeProgressResponseDto } from '../dto/challenge-progress-response.dto';
 import { GenderType, ChallengeType } from '@/types/challenge.enum';
 
 export function ApiCreateChallenge() {
@@ -544,6 +545,9 @@ export function ApiLeaveChallenge() {
   );
 }
 
+/**
+ * 인기 챌린지 조회 API
+ */
 export function ApiGetPopularChallenges() {
   return applyDecorators(
     ApiOperation({
@@ -555,6 +559,29 @@ export function ApiGetPopularChallenges() {
       description: '인기 챌린지 조회 성공',
       type: ChallengeResponseDto,
       isArray: true,
+    }),
+  );
+}
+
+/**
+ * 챌린지 달성률 API
+ */
+export function ApiGetUserChallengeProgress() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '사용자 챌린지 진행률 조회',
+      description:
+        '특정 챌린지에 대해 사용자의 주차별 진행 정보 및 전체 달성률을 반환합니다.',
+    }),
+    ApiParam({
+      name: 'challengeUuid',
+      description: '조회할 챌린지 UUID',
+      type: String,
+    }),
+    ApiResponse({
+      status: 200,
+      description: '사용자 챌린지 진행률 조회 성공',
+      type: ChallengeProgressResponseDto,
     }),
   );
 }

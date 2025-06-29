@@ -6,6 +6,7 @@ import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { FindAllChallengesDto } from './dto/find-all-challenges.dto';
 import { User } from '@/entities/user.entity';
+import { Post } from '@/entities/post.entity';
 import { ulid } from 'ulid';
 import {
   ChallengeType,
@@ -14,7 +15,7 @@ import {
 } from '@/types/challenge.enum';
 import { CustomException } from '@/utils/custom-exception';
 import { ErrorCode } from '@/types/error-code.enum';
-import { MoreThan, LessThan, MoreThanOrEqual } from 'typeorm';
+import { MoreThan, LessThan, MoreThanOrEqual, Between } from 'typeorm';
 import { subDays } from 'date-fns';
 
 @Injectable()
@@ -24,6 +25,8 @@ export class ChallengeService {
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Post)
+    private postRepository: Repository<Post>,
   ) {}
 
   /**
@@ -371,6 +374,76 @@ export class ChallengeService {
     return {
       message: '참가 완료',
       challengeUuid,
+    };
+  }
+
+  /**
+   * 챌린지 진행률 조회
+   */
+  async getUserChallengeProgress(userUuid: string, challengeUuid: string) {
+    const challenge = await this.challengeRepository.findOne({
+      where: { challengeUuid },
+    });
+
+    if (!challenge) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_FOUND,
+        '해당 아이디의 챌린지가 없습니다.',
+      );
+    }
+
+    const { startDate, endDate, goal } = challenge;
+
+    const posts = await this.postRepository.find({
+      where: {
+        userUuid,
+        challengeUuid,
+        createdAt: Between(startDate, endDate),
+      },
+    });
+
+    // 주차별 count 계산 (중복 날짜 제거)
+    const weekMap: Record<number, Set<string>> = {};
+
+    posts.forEach((post) => {
+      const diffMs = post.createdAt.getTime() - startDate.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const weekNum = Math.floor(diffDays / 7) + 1;
+
+      const dateKey = post.createdAt.toISOString().split('T')[0];
+
+      if (!weekMap[weekNum]) {
+        weekMap[weekNum] = new Set();
+      }
+      weekMap[weekNum].add(dateKey);
+    });
+
+    // 전체 주차 수 계산
+    const totalWeeks = Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 7),
+    );
+
+    const progress = [];
+    let achievedWeeks = 0;
+
+    for (let i = 1; i <= totalWeeks; i++) {
+      const count = weekMap[i] ? weekMap[i].size : 0;
+      const achieved = count >= goal;
+
+      if (achieved) achievedWeeks++;
+
+      progress.push({
+        week: i,
+        count,
+        achieved,
+      });
+    }
+
+    const totalAchievementRate = Math.round((achievedWeeks / totalWeeks) * 100);
+
+    return {
+      progress,
+      totalAchievementRate,
     };
   }
 

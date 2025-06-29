@@ -25,6 +25,7 @@ import {
   ApiGetRecentChallenges,
   ApiGetUserCompletedChallengeCount,
   ApiGetPopularChallenges,
+  ApiGetUserChallengeProgress,
 } from './decorators/challenges.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
@@ -161,6 +162,25 @@ export class ChallengeController {
     @UserUuid() userUuid: string,
   ) {
     return this.challengeService.joinChallenge(challengeUuid, userUuid);
+  }
+
+  /**
+   * 사용자 챌린지 진행률 조회
+   * @param challengeUuid 조회할 챌린지 UUID
+   * @param userUuid 현재 로그인한 사용자 UUID
+   * @returns 주차별 진행 정보 및 전체 달성률
+   */
+
+  @Get(':challengeUuid/progress')
+  @ApiGetUserChallengeProgress()
+  getUserChallengeProgress(
+    @Param('challengeUuid') challengeUuid: string,
+    @UserUuid() userUuid: string,
+  ) {
+    return this.challengeService.getUserChallengeProgress(
+      userUuid,
+      challengeUuid,
+    );
   }
 
   /**

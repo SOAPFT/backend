@@ -237,8 +237,12 @@ export class ChallengeService {
       );
     }
 
-    challenge.title = updateChallengeDto.title;
-    challenge.introduce = updateChallengeDto.introduce;
+    if (updateChallengeDto.banner) {
+      challenge.banner = updateChallengeDto.banner;
+    }
+    if (updateChallengeDto.profile) {
+      challenge.profile = updateChallengeDto.profile;
+    }
 
     await this.challengeRepository.save(challenge);
 

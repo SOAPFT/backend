@@ -391,30 +391,48 @@ export class AuthService {
     }
   }
 
-  async generateDevToken(userUuid: string, res: Response) {
+  async generateDevToken(res: Response) {
     try {
-      // 유저가 존재하는지 확인
-      await this.userService.checkUserExists(userUuid);
+      // 1. 고정된 테스트용 userUuid (ENV에 없으면 fallback ULID 사용)
+      const userUuid = '01JYKVN18MCW5B9FZ1PP7T14XS';
 
-      // 토큰 페이로드
+      // 2. 유저 존재 여부 확인
+      const exists = await this.userService.checkUserExists(userUuid);
+
+      // 3. 없으면 더미 유저 생성
+      if (!exists) {
+        await this.userService.createUser(
+          {
+            socialId: userUuid, // dev용 id
+            socialNickname: '개발계정',
+            nickname: '개발계정',
+            profileImage: null,
+            socialProvider: SocialProvider.KAKAO,
+            pushToken: null,
+          },
+          userUuid,
+        );
+      }
+
+      // 4. 토큰 페이로드
       const payload = { userUuid };
 
-      // 액세스 토큰 발급
+      // 5. 액세스 토큰 발급
       const access_token = await this.jwtService.sign(payload, {
         secret: process.env.JWT_ACCESS_TOKEN_SECRET,
         expiresIn: '30d',
       });
 
-      // 리프레시 토큰 발급
+      // 6. 리프레시 토큰 발급
       const refresh_token = await this.jwtService.sign(payload, {
         secret: process.env.JWT_REFRESH_TOKEN_SECRET,
         expiresIn: '30d',
       });
 
-      // 리프레시 토큰 해싱 및 저장
+      // 7. 리프레시 토큰 해싱
       const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
 
-      // 기존 인증 정보 확인 및 업데이트 또는 생성
+      // 8. 기존 인증 정보 확인 후 저장/갱신
       const existingAuth = await this.authRepository.findOne({
         where: { userUuid },
       });
@@ -430,6 +448,7 @@ export class AuthService {
         await this.authRepository.save(newAuth);
       }
 
+      // 9. 응답 반환
       return res.json({
         accessToken: access_token,
         refreshToken: refresh_token,
@@ -442,4 +461,56 @@ export class AuthService {
       );
     }
   }
+
+  //   async generateDevToken(userUuid: string, res: Response) {
+  //     try {
+  //       // 유저가 존재하는지 확인
+  //       await this.userService.checkUserExists(userUuid);
+
+  //       // 토큰 페이로드
+  //       const payload = { userUuid };
+
+  //       // 액세스 토큰 발급
+  //       const access_token = await this.jwtService.sign(payload, {
+  //         secret: process.env.JWT_ACCESS_TOKEN_SECRET,
+  //         expiresIn: '30d',
+  //       });
+
+  //       // 리프레시 토큰 발급
+  //       const refresh_token = await this.jwtService.sign(payload, {
+  //         secret: process.env.JWT_REFRESH_TOKEN_SECRET,
+  //         expiresIn: '30d',
+  //       });
+
+  //       // 리프레시 토큰 해싱 및 저장
+  //       const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
+
+  //       // 기존 인증 정보 확인 및 업데이트 또는 생성
+  //       const existingAuth = await this.authRepository.findOne({
+  //         where: { userUuid },
+  //       });
+
+  //       if (existingAuth) {
+  //         existingAuth.refreshToken = hashedRefreshToken;
+  //         await this.authRepository.save(existingAuth);
+  //       } else {
+  //         const newAuth = this.authRepository.create({
+  //           userUuid,
+  //           refreshToken: hashedRefreshToken,
+  //         });
+  //         await this.authRepository.save(newAuth);
+  //       }
+
+  //       return res.json({
+  //         accessToken: access_token,
+  //         refreshToken: refresh_token,
+  //       });
+  //     } catch (error) {
+  //       console.error('개발용 토큰 생성 에러:', error);
+  //       CustomException.throw(
+  //         ErrorCode.INTERNAL_SERVER_ERROR,
+  //         '개발용 토큰 생성 실패',
+  //       );
+  //     }
+  //   }
 }

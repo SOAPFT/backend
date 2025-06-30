@@ -18,7 +18,7 @@ import {
   ApiTestAuth,
 } from './decorators/auth.swagger';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
-import { DevLoginDto, SocialLoginDto } from './dto/auth.dto';
+import { SocialLoginDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
 
@@ -67,8 +67,8 @@ export class AuthController {
 
   @Post('dev-token')
   @ApiDevToken()
-  async getDevToken(@Body() devLoginDto: DevLoginDto, @Res() res: Response) {
-    return this.authService.generateDevToken(devLoginDto.userUuid, res);
+  async getDevToken(@Res() res: Response) {
+    return this.authService.generateDevToken(res);
   }
 
   @Get('auth-test')

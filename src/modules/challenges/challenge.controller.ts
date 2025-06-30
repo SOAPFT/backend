@@ -26,6 +26,7 @@ import {
   ApiGetUserCompletedChallengeCount,
   ApiGetPopularChallenges,
   ApiGetUserChallengeProgress,
+  ApiSearchChallenges,
 } from './decorators/challenges.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
@@ -110,6 +111,23 @@ export class ChallengeController {
   @ApiGetPopularChallenges()
   getPopularChallenges() {
     return this.challengeService.getRecentChallenges();
+  }
+
+  /**
+   * 챌린지 검색
+   * @param keyword 검색 키워드
+   * @param page 페이지 번호 (기본: 1)
+   * @param limit 한 페이지당 결과 수 (기본: 10, 최대: 50)
+   * @returns 키워드와 일치하거나 연관된 챌린지 목록
+   */
+  @Get('search')
+  @ApiSearchChallenges()
+  async searchChallenges(
+    @Query('keyword') keyword: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    return this.challengeService.searchChallenges(keyword, page, limit);
   }
 
   /**

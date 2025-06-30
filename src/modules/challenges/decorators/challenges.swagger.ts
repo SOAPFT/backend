@@ -564,6 +564,62 @@ export function ApiGetPopularChallenges() {
 }
 
 /**
+ * 챌린지 검색 API
+ */
+export function ApiSearchChallenges() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '챌린지 검색',
+      description: '키워드로 챌린지를 검색하고 페이지네이션 결과를 반환합니다.',
+    }),
+    ApiQuery({
+      name: 'keyword',
+      required: false,
+      description: '검색 키워드',
+      type: String,
+      example: '다이어트',
+    }),
+    ApiQuery({
+      name: 'page',
+      required: false,
+      description: '페이지 번호',
+      type: Number,
+      example: 1,
+    }),
+    ApiQuery({
+      name: 'limit',
+      required: false,
+      description: '페이지당 결과 수',
+      type: Number,
+      example: 10,
+    }),
+    ApiResponse({
+      status: 200,
+      description: '검색된 챌린지 목록과 페이지 정보',
+      schema: {
+        example: {
+          data: [
+            {
+              challengeUuid: '01HYXXXXXXX',
+              title: '하루 1만보 챌린지',
+              introduce: '하루 만보를 목표로 하는 챌린지입니다.',
+              // ...필요 필드 예시 추가
+            },
+          ],
+          meta: {
+            total: 20,
+            page: 1,
+            limit: 10,
+            totalPages: 2,
+            hasNextPage: true,
+          },
+        },
+      },
+    }),
+  );
+}
+
+/**
  * 챌린지 달성률 API
  */
 export function ApiGetUserChallengeProgress() {

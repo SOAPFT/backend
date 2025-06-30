@@ -15,7 +15,7 @@ import {
 } from '@/types/challenge.enum';
 import { CustomException } from '@/utils/custom-exception';
 import { ErrorCode } from '@/types/error-code.enum';
-import { MoreThan, LessThan, MoreThanOrEqual, Between } from 'typeorm';
+import { MoreThan, LessThan, MoreThanOrEqual, Between, ILike } from 'typeorm';
 import { subDays } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
@@ -479,6 +479,32 @@ export class ChallengeService {
 
     return {
       message: '챌린지에서 성공적으로 탈퇴했습니다.',
+    };
+  }
+
+  /**
+   * 챌린지 검색
+   */
+  async searchChallenges(keyword: string, page: number, limit: number) {
+    const [results, total] = await this.challengeRepository.findAndCount({
+      where: [
+        { title: ILike(`%${keyword}%`) },
+        { introduce: ILike(`%${keyword}%`) },
+      ],
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: results,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+      },
     };
   }
 

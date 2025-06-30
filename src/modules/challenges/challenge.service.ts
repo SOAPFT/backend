@@ -393,7 +393,7 @@ export class ChallengeService {
       );
     }
 
-    const { startDate, endDate, goal } = challenge;
+    const { startDate, endDate, goal, participantUuid } = challenge;
 
     const posts = await this.postRepository.find({
       where: {
@@ -443,7 +443,11 @@ export class ChallengeService {
     const totalAchievementRate = Math.round((achievedWeeks / totalWeeks) * 100);
 
     return {
-      progress,
+      challengeInfo: {
+        participantCount: participantUuid.length,
+        startDate,
+        endDate,
+      },
       totalAchievementRate,
     };
   }

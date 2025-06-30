@@ -14,7 +14,7 @@ import {
 } from '../../../decorators/swagger.decorator';
 import { CreateChallengeDto } from '../dto/create-challenge.dto';
 import { ChallengeResponseDto } from '../dto/challenge-response.dto';
-import { ChallengeProgressResponseDto } from '../dto/challenge-progress-response.dto';
+// import { ChallengeProgressResponseDto } from '../dto/challenge-progress-response.dto';
 import { GenderType, ChallengeType } from '@/types/challenge.enum';
 
 export function ApiCreateChallenge() {
@@ -627,7 +627,7 @@ export function ApiGetUserChallengeProgress() {
     ApiOperation({
       summary: '사용자 챌린지 진행률 조회',
       description:
-        '특정 챌린지에 대해 사용자의 주차별 진행 정보 및 전체 달성률을 반환합니다.',
+        '특정 챌린지에 대해 사용자의 주차별 진행 정보, 전체 달성률, 참가자 수, 시작일, 종료일을 반환합니다.',
     }),
     ApiParam({
       name: 'challengeUuid',
@@ -637,7 +637,23 @@ export function ApiGetUserChallengeProgress() {
     ApiResponse({
       status: 200,
       description: '사용자 챌린지 진행률 조회 성공',
-      type: ChallengeProgressResponseDto,
+      schema: {
+        type: 'object',
+        properties: {
+          challengeInfo: {
+            type: 'object',
+            properties: {
+              participantCount: { type: 'number', example: 23 },
+              startDate: {
+                type: 'string',
+                example: '2025-07-01T00:00:00.000Z',
+              },
+              endDate: { type: 'string', example: '2025-07-31T23:59:59.000Z' },
+            },
+          },
+          totalAchievementRate: { type: 'number', example: 67 },
+        },
+      },
     }),
   );
 }

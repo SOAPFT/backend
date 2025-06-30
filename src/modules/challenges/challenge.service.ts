@@ -17,6 +17,7 @@ import { CustomException } from '@/utils/custom-exception';
 import { ErrorCode } from '@/types/error-code.enum';
 import { MoreThan, LessThan, MoreThanOrEqual, Between } from 'typeorm';
 import { subDays } from 'date-fns';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class ChallengeService {
@@ -479,5 +480,49 @@ export class ChallengeService {
     return {
       message: '챌린지에서 성공적으로 탈퇴했습니다.',
     };
+  }
+
+  /**
+   * 종료일이 지난 챌린지를 자동으로 종료 처리
+   * 100% 달성한 참여자를 successParticipantsUuid에 추가
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async closeExpiredChallenges() {
+    const now = new Date();
+
+    // 1. 종료일이 지났고, 아직 종료 처리되지 않은 챌린지 조회
+    const expiredChallenges = await this.challengeRepository.find({
+      where: {
+        endDate: LessThan(now),
+        isFinished: false,
+      },
+    });
+
+    for (const challenge of expiredChallenges) {
+      const successParticipants: string[] = [];
+
+      // 2. 참여자별로 진행률 조회
+      for (const userUuid of challenge.participantUuid) {
+        const { totalAchievementRate } = await this.getUserChallengeProgress(
+          userUuid,
+          challenge.challengeUuid,
+        );
+
+        // 3. 달성률 100%인 경우 successParticipants에 추가
+        if (totalAchievementRate === 100) {
+          successParticipants.push(userUuid);
+        }
+      }
+
+      // 4. 챌린지 업데이트
+      challenge.successParticipantsUuid = successParticipants;
+      challenge.isFinished = true;
+
+      await this.challengeRepository.save(challenge);
+    }
+
+    console.log(
+      `[스케줄러] ${expiredChallenges.length}개의 챌린지가 종료 처리되었습니다.`,
+    );
   }
 }

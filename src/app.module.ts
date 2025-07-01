@@ -16,6 +16,7 @@ import { LikesModule } from './modules/likes/likes.module';
 import { UsersModule } from './modules/users/users.module';
 import { ChallengeModule } from './modules/challenges/challenge.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     UsersModule,
     ChallengeModule,
     ChatModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

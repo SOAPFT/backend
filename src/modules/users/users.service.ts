@@ -64,6 +64,25 @@ export class UsersService {
     return user.id;
   }
 
+  /**
+   * userUuid로 사용자 전체 정보 조회
+   * @param userUuid 사용자 UUID
+   * @returns User 엔티티 (없으면 NotFoundException 발생)
+   */
+  async getUserByUuid(userUuid: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { userUuid },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `UUID ${userUuid}에 해당하는 사용자를 찾을 수 없습니다.`,
+      );
+    }
+
+    return user;
+  }
+
   // 최초 회원가입 후 추가 정보 입력
   async completeOnboarding(userUuid: string, dto: OnBoardingDto) {
     const user = await this.userRepository.findOne({ where: { userUuid } });

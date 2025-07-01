@@ -148,44 +148,20 @@ export function ApiRefreshToken() {
 export function ApiDevToken() {
   return applyDecorators(
     ApiOperation({
-      summary: '[개발용] 토큰 생성',
-      description: '개발 환경에서 테스트용 토큰을 생성합니다.',
-    }),
-    ApiBody({
-      schema: {
-        type: 'object',
-        required: ['userId'],
-        properties: {
-          userId: {
-            type: 'number',
-            description: '사용자 ID',
-            example: 1,
-          },
-        },
-      },
+      summary: '개발용 토큰 발급',
+      description: '바디 없이 호출 시 개발용 accessToken 및 refreshToken 발급',
     }),
     ApiResponse({
       status: 200,
-      description: '토큰 생성 성공',
+      description: '토큰 발급 성공',
       schema: {
         type: 'object',
         properties: {
-          accessToken: {
-            type: 'string',
-            example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-          },
-          refreshToken: {
-            type: 'string',
-            example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-          },
+          accessToken: { type: 'string', example: 'access_token_value' },
+          refreshToken: { type: 'string', example: 'refresh_token_value' },
         },
       },
     }),
-    ApiResponse(
-      createErrorResponse('USER_001', '사용자를 찾을 수 없습니다.', 404),
-    ),
-    ApiResponse(CommonErrorResponses.ValidationFailed),
-    ApiResponse(CommonErrorResponses.InternalServerError),
   );
 }
 

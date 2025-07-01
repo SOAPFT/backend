@@ -14,3 +14,9 @@ export enum ChallengeStatusType {
   IN_PROGRESS = 'in_progress',
   COMPLETED = 'completed',
 }
+
+export enum ChallengeFilterType {
+  ALL = 'all',
+  UPCOMING = 'upcoming',
+  ONGOING = 'ongoing',
+}

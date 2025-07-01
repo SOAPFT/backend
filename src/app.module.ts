@@ -17,8 +17,10 @@ import { UsersModule } from './modules/users/users.module';
 import { ChallengeModule } from './modules/challenges/challenge.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       envFilePath: `env/.${process.env.NODE_ENV || 'development'}.env`,
       isGlobal: true,

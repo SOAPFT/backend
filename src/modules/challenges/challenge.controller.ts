@@ -12,18 +12,22 @@ import {
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { FindAllChallengesDto } from './dto/find-all-challenges.dto';
-import { JoinChallengeDto } from './dto/join-challenge.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ChallengeFilterType } from '@/types/challenge.enum';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   ApiCreateChallenge,
   ApiGetAllChallenges,
   ApiGetChallenge,
   ApiUpdateChallenge,
-  ApiDeleteChallenge,
   ApiJoinChallenge,
   ApiGetUserChallenges,
   ApiLeaveChallenge,
   ApiGetRecentChallenges,
+  ApiGetUserCompletedChallengeCount,
+  ApiGetPopularChallenges,
+  ApiGetUserChallengeProgress,
+  ApiSearchChallenges,
+  ApiGetMonthlyChallengeStats,
 } from './decorators/challenges.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
@@ -43,8 +47,23 @@ export class ChallengeController {
    */
   @Get('user')
   @ApiGetUserChallenges()
-  getUserChallenges(@UserUuid() userUuid: string) {
-    return this.challengeService.findUserChallenges(userUuid);
+  @ApiQuery({ name: 'status', enum: ChallengeFilterType, required: false })
+  getUserChallenges(
+    @UserUuid() userUuid: string,
+    @Query('status') status?: ChallengeFilterType,
+  ) {
+    return this.challengeService.findUserChallenges(userUuid, status);
+  }
+
+  /**
+   * 사용자가 성공한 챌린지 조회
+   * @param userUuid 인증된 사용자 UUID
+   * @returns 사용자가 참여한 챌린지 정보
+   */
+  @Get('successful')
+  @ApiGetUserCompletedChallengeCount()
+  getUserCompletedChallengeCount(@UserUuid() userUuid: string) {
+    return this.challengeService.countUserCompletedChallenges(userUuid);
   }
 
   /**
@@ -85,6 +104,34 @@ export class ChallengeController {
   }
 
   /**
+   * 인기있는 챌린지 목록
+   * @returns 최근 생성된 챌린지 목록
+   */
+
+  @Get('popular')
+  @ApiGetPopularChallenges()
+  getPopularChallenges() {
+    return this.challengeService.getRecentChallenges();
+  }
+
+  /**
+   * 챌린지 검색
+   * @param keyword 검색 키워드
+   * @param page 페이지 번호 (기본: 1)
+   * @param limit 한 페이지당 결과 수 (기본: 10, 최대: 50)
+   * @returns 키워드와 일치하거나 연관된 챌린지 목록
+   */
+  @Get('search')
+  @ApiSearchChallenges()
+  async searchChallenges(
+    @Query('keyword') keyword: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    return this.challengeService.searchChallenges(keyword, page, limit);
+  }
+
+  /**
    * 챌린지 상세 조회
    * @param challengeId 챌린지 ID
    * @param userUuid 현재 로그인한 사용자의 UUID
@@ -106,52 +153,52 @@ export class ChallengeController {
    * @param userUuid 현재 로그인한 사용자의 UUID
    * @returns 수정된 챌린지 정보
    */
-  @Patch(':challengeId')
+  @Patch(':challengeUuid')
   @ApiUpdateChallenge()
   update(
-    @Param('challengeId') challengeId: string,
+    @Param('challengeUuid') challengeUuid: string,
     @Body() updateChallengeDto: UpdateChallengeDto,
     @UserUuid() userUuid: string,
   ) {
     return this.challengeService.updateChallenge(
-      +challengeId,
+      challengeUuid,
       updateChallengeDto,
       userUuid,
     );
   }
 
   /**
-   * 챌린지 삭제
-   * @param challengeId 챌린지 ID
-   * @param userUuid 현재 로그인한 사용자의 UUID
-   */
-  @Delete(':challengeId')
-  @ApiDeleteChallenge()
-  remove(
-    @Param('challengeId') challengeId: string,
-    @UserUuid() userUuid: string,
-  ) {
-    return this.challengeService.deleteChallenge(+challengeId, userUuid);
-  }
-
-  /**
    * 챌린지 참여
-   * @param challengeId 챌린지 ID
+   * @param challengeUuid 챌린지 Uuid
    * @param joinChallengeDto 참여 정보
    * @param userUuid 현재 로그인한 사용자의 UUID
    * @returns 참여된 챌린지 정보
    */
-  @Post(':challengeId/join')
+  @Post(':challengeUuid/join')
   @ApiJoinChallenge()
   joinChallenge(
-    @Param('challengeId') challengeId: string,
-    @Body() joinChallengeDto: JoinChallengeDto,
+    @Param('challengeUuid') challengeUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return this.challengeService.joinChallenge(
-      +challengeId,
+    return this.challengeService.joinChallenge(challengeUuid, userUuid);
+  }
+
+  /**
+   * 사용자 챌린지 진행률 조회
+   * @param challengeUuid 조회할 챌린지 UUID
+   * @param userUuid 현재 로그인한 사용자 UUID
+   * @returns 주차별 진행 정보 및 전체 달성률
+   */
+
+  @Get(':challengeUuid/progress')
+  @ApiGetUserChallengeProgress()
+  getUserChallengeProgress(
+    @Param('challengeUuid') challengeUuid: string,
+    @UserUuid() userUuid: string,
+  ) {
+    return this.challengeService.getUserChallengeProgress(
       userUuid,
-      joinChallengeDto.password,
+      challengeUuid,
     );
   }
 
@@ -164,9 +211,30 @@ export class ChallengeController {
   @Delete(':challengeId/leave')
   @ApiLeaveChallenge()
   leaveChallenge(
-    @Param('challengeId') challengeId: string,
+    @Param('challengeUuid') challengeUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return this.challengeService.leaveChallenge(+challengeId, userUuid);
+    return this.challengeService.leaveChallenge(challengeUuid, userUuid);
+  }
+
+  /**
+   * 챌린지 월별 인증 현황 조회
+   * @param challengeUuid 챌린지 UUID
+   * @param year 조회할 연도
+   * @param month 조회할 월
+   * @returns 각 날짜별 인증 수와 인증한 사용자 리스트를 반환
+   */
+  @Get(':challengeUuid/stats')
+  @ApiGetMonthlyChallengeStats()
+  async getChallengeMonthlyStats(
+    @Param('challengeUuid') challengeUuid: string,
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    return this.challengeService.getMonthlyChallengeStats(
+      challengeUuid,
+      parseInt(year),
+      parseInt(month),
+    );
   }
 }

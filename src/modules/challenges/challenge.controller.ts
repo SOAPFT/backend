@@ -27,6 +27,7 @@ import {
   ApiGetPopularChallenges,
   ApiGetUserChallengeProgress,
   ApiSearchChallenges,
+  ApiGetMonthlyChallengeStats,
 } from './decorators/challenges.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
@@ -214,5 +215,26 @@ export class ChallengeController {
     @UserUuid() userUuid: string,
   ) {
     return this.challengeService.leaveChallenge(challengeUuid, userUuid);
+  }
+
+  /**
+   * 챌린지 월별 인증 현황 조회
+   * @param challengeUuid 챌린지 UUID
+   * @param year 조회할 연도
+   * @param month 조회할 월
+   * @returns 각 날짜별 인증 수와 인증한 사용자 리스트를 반환
+   */
+  @Get(':challengeUuid/stats')
+  @ApiGetMonthlyChallengeStats()
+  async getChallengeMonthlyStats(
+    @Param('challengeUuid') challengeUuid: string,
+    @Query('year') year: string,
+    @Query('month') month: string,
+  ) {
+    return this.challengeService.getMonthlyChallengeStats(
+      challengeUuid,
+      parseInt(year),
+      parseInt(month),
+    );
   }
 }

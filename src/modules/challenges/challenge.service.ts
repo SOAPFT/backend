@@ -555,4 +555,51 @@ export class ChallengeService {
       `[스케줄러] ${expiredChallenges.length}개의 챌린지가 종료 처리되었습니다.`,
     );
   }
+
+  /**
+   * 챌린지 월별 인증 현황 조회
+   */
+  async getMonthlyChallengeStats(
+    challengeUuid: string,
+    year: number,
+    month: number,
+  ) {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999); // 해당 달의 마지막 날 끝 시간
+
+    const posts = await this.postRepository
+      .createQueryBuilder('post')
+      .select(['post.id', 'post.userUuid', 'post.createdAt'])
+      .where('post.challengeUuid = :challengeUuid', { challengeUuid })
+      .andWhere('post.createdAt BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate,
+      })
+      .getMany();
+
+    // 날짜별로 그룹핑
+    const result: Record<string, { count: number; users: any[] }> = {};
+
+    for (const post of posts) {
+      const dateKey = post.createdAt.toISOString().split('T')[0]; // yyyy-mm-dd
+
+      if (!result[dateKey]) {
+        result[dateKey] = { count: 0, users: [] };
+      }
+
+      result[dateKey].count += 1;
+
+      // userUuid로 사용자 정보 조회
+      const user = await this.userRepository.findOne({
+        where: { userUuid: post.userUuid },
+        select: ['userUuid', 'nickname', 'profileImage'],
+      });
+
+      if (user) {
+        result[dateKey].users.push(user);
+      }
+    }
+
+    return result;
+  }
 }

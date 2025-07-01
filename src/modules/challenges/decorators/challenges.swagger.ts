@@ -14,7 +14,7 @@ import {
 } from '../../../decorators/swagger.decorator';
 import { CreateChallengeDto } from '../dto/create-challenge.dto';
 import { ChallengeResponseDto } from '../dto/challenge-response.dto';
-// import { ChallengeProgressResponseDto } from '../dto/challenge-progress-response.dto';
+import { MonthlyChallengeStatsResponseDto } from '../dto/monthly-challenge-stats.response.dto';
 import { GenderType, ChallengeType } from '@/types/challenge.enum';
 
 export function ApiCreateChallenge() {
@@ -654,6 +654,36 @@ export function ApiGetUserChallengeProgress() {
           totalAchievementRate: { type: 'number', example: 67 },
         },
       },
+    }),
+  );
+}
+
+export function ApiGetMonthlyChallengeStats() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '챌린지 월별 인증 현황 조회',
+      description:
+        '해당 챌린지의 지정된 월에 대해 날짜별 인증 수 및 인증한 사용자 정보 배열을 반환합니다.',
+    }),
+    ApiParam({
+      name: 'challengeUuid',
+      description: '조회할 챌린지 UUID',
+      type: String,
+    }),
+    ApiQuery({
+      name: 'year',
+      description: '조회할 연도 (예: 2025)',
+      type: Number,
+    }),
+    ApiQuery({
+      name: 'month',
+      description: '조회할 달 (1-12)',
+      type: Number,
+    }),
+    ApiResponse({
+      status: 200,
+      description: '월별 인증 현황 조회 성공',
+      type: MonthlyChallengeStatsResponseDto,
     }),
   );
 }

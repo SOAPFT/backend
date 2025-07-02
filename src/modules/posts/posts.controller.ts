@@ -100,8 +100,11 @@ export class PostsController {
    */
   @Get(':postUuid')
   @ApiGetPostDetail()
-  async findOnePost(@Param('postUuid') postUuid: string) {
-    return await this.postsService.getPostDetail(postUuid);
+  async findOnePost(
+    @Param('postUuid') postUuid: string,
+    @UserUuid() userUuid: string,
+  ) {
+    return await this.postsService.getPostDetail(postUuid, userUuid);
   }
 
   /**

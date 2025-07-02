@@ -127,7 +127,7 @@ export class PostsService {
   }
 
   // 게시글 상세 조회
-  async getPostDetail(postUuid: string) {
+  async getPostDetail(postUuid: string, userUuid: string) {
     const post = await this.postRepository.findOne({
       where: { postUuid },
     });
@@ -158,6 +158,7 @@ export class PostsService {
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         userUuid: post.userUuid,
+        isMine: post.userUuid === userUuid,
         user: user
           ? {
               userUuid: user.userUuid,

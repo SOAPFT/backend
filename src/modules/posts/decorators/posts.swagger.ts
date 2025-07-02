@@ -230,6 +230,7 @@ export function ApiGetPostDetail() {
             createdAt: '2025-07-02T16:27:33.105Z',
             updatedAt: '2025-07-02T16:40:59.340Z',
             userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
+            isMine: true,
             user: {
               userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
               nickname: '헬스왕',

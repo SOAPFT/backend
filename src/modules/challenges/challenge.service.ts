@@ -328,7 +328,7 @@ export class ChallengeService {
     if (!(challenge.startAge <= user.age && user.age <= challenge.endAge)) {
       CustomException.throw(
         ErrorCode.AGE_RESTRICTION_NOT_MET,
-        '참여 가능한 연력 조건을 만족하지 않습니다.',
+        '참여 가능한 연령 조건을 만족하지 않습니다.',
       );
     }
 

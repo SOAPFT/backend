@@ -16,14 +16,12 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ApiCreatePost,
   ApiDeletePost,
-  ApiGetAllPosts,
-  ApiGetPostById,
+  ApiGetUserPosts,
+  ApiGetPostDetail,
   ApiUpdatePost,
-  ApiGetPostsByNickname,
-  ApiGetGroupPosts,
+  ApiGetPostsByChallenge,
+  ApiGetMyPosts,
 } from './decorators/posts.swagger';
-import { FindAllPostsDto } from './dto/find-all-posts.dto';
-import { FindGroupPostsDto } from './dto/find-group-posts.dto';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 
@@ -42,38 +40,52 @@ export class PostsController {
    */
   @Post()
   @ApiCreatePost()
-  createPost(
+  async createPost(
     @Body() createPostDto: CreatePostDto,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.postsService.createPost(createPostDto, userUuid);
   }
 
   /**
-   * 현재 로그인 사용자의 게시글 조회
-   * @param findAllPostsDto 게시글 목록 조회 조건들
+   * 현재 로그인한 사용자의 게시글 조회 (페이지네이션)
    * @param userUuid 사용자 UUID
-   * @returns 사용자 게시글 목록
+   * @param page 페이지 번호
+   * @param limit 페이지당 아이템 수
+   * @returns 게시글 목록
    */
-  @Get()
-  @ApiGetAllPosts()
-  findAllPosts(
-    @Query() findAllPostsDto: FindAllPostsDto,
+  @Get('my')
+  @ApiGetMyPosts()
+  async getMyPosts(
     @UserUuid() userUuid: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
   ) {
-    return null;
+    return await this.postsService.getPostsByUserUuid(
+      userUuid,
+      Number(page),
+      Number(limit),
+    );
   }
 
   /**
-   * 다른 사용자의 게시글 조회
-   * @param nickname 사용자 닉네임
-   * @param findAllPostsDto 게시글 목록 조회 조건들
-   * @returns 사용자 게시글 목록
+   * 특정 사용자의 게시글 목록 조회 (페이지네이션)
+   * @param userUuid 조회할 사용자 UUID
+   * @param page 페이지 번호
+   * @param limit 페이지당 개수
    */
-  @Get('user/:nickname')
-  @ApiGetPostsByNickname()
-  findAllPostsByNickname(@Param('nickname') nickname: string) {
-    return null;
+  @Get('user/:userUuid')
+  @ApiGetUserPosts()
+  async getUserPosts(
+    @Param('userUuid') userUuid: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    return await this.postsService.getUserPosts(
+      userUuid,
+      Number(page),
+      Number(limit),
+    );
   }
 
   /**
@@ -83,12 +95,12 @@ export class PostsController {
    * @returns 게시글 상세 정보
    */
   @Get(':postUuid')
-  @ApiGetPostById()
-  findOnePost(
+  @ApiGetPostDetail()
+  async findOnePost(
     @Param('postUuid') postUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.postsService.getPostDetail(postUuid, userUuid);
   }
 
   /**
@@ -100,12 +112,16 @@ export class PostsController {
    */
   @Patch(':postUuid')
   @ApiUpdatePost()
-  updatePost(
+  async updatePost(
     @Param('postUuid') postUuid: string,
     @Body() updatePostDto: UpdatePostDto,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.postsService.updatePost(
+      postUuid,
+      updatePostDto,
+      userUuid,
+    );
   }
 
   /**
@@ -116,27 +132,27 @@ export class PostsController {
    */
   @Delete(':postUuid')
   @ApiDeletePost()
-  removePost(
+  async deletePost(
     @Param('postUuid') postUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.postsService.deletePost(postUuid, userUuid);
   }
 
   /**
-   * 그룹 게시글 조회
-   * @param groupId 그룹 ID
-   * @param findGroupPostsDto 조회 옵션
-   * @param userUuid 사용자 UUID
-   * @returns 그룹원들의 게시글 목록
+   * 특정 챌린지의 게시글 목록 조회 (페이지네이션)
    */
-  @Get('group/:groupId')
-  @ApiGetGroupPosts()
-  findGroupPosts(
-    @Param('groupId') groupId: string,
-    @Query() findGroupPostsDto: FindGroupPostsDto,
-    @UserUuid() userUuid: string,
+  @Get('/challenge/:challengeUuid')
+  @ApiGetPostsByChallenge()
+  async getPostsByChallenge(
+    @Param('challengeUuid') challengeUuid: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
   ) {
-    return null;
+    return await this.postsService.getPostsByChallenge(
+      challengeUuid,
+      Number(page),
+      Number(limit),
+    );
   }
 }

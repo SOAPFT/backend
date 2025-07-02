@@ -45,6 +45,9 @@ export class Post {
   @Column({ name: 'is_public', type: 'boolean', default: true })
   isPublic: boolean;
 
+  @Column({ name: 'views', type: 'int', default: 0 })
+  views: number;
+
   /** 게시글 생성일시 */
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

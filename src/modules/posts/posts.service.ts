@@ -139,6 +139,9 @@ export class PostsService {
       );
     }
 
+    post.views += 1;
+    await this.postRepository.save(post);
+
     // 사용자 정보 조회
     const user = await this.userRepository.findOne({
       where: { userUuid: post.userUuid },
@@ -159,6 +162,7 @@ export class PostsService {
         updatedAt: post.updatedAt,
         userUuid: post.userUuid,
         isMine: post.userUuid === userUuid,
+        views: post.views,
         user: user
           ? {
               userUuid: user.userUuid,
@@ -210,12 +214,33 @@ export class PostsService {
       take: limit,
     });
 
+    // 각 게시글의 userUuid로 사용자 정보 조회 후 병합
+    const postsWithUser = await Promise.all(
+      posts.map(async (post) => {
+        const user = await this.userRepository.findOne({
+          where: { userUuid: post.userUuid },
+          select: ['userUuid', 'nickname', 'profileImage'],
+        });
+
+        return {
+          ...post,
+          user: user
+            ? {
+                userUuid: user.userUuid,
+                nickname: user.nickname,
+                profileImage: user.profileImage,
+              }
+            : null,
+        };
+      }),
+    );
+
     return {
       message: '챌린지 게시글 목록 조회 성공',
       total,
       page,
       limit,
-      posts,
+      posts: postsWithUser,
     };
   }
 }

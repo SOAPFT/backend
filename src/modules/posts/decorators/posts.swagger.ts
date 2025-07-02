@@ -231,6 +231,7 @@ export function ApiGetPostDetail() {
             updatedAt: '2025-07-02T16:40:59.340Z',
             userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
             isMine: true,
+            views: 10,
             user: {
               userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
               nickname: '헬스왕',
@@ -476,15 +477,21 @@ export function ApiGetPostsByChallenge() {
           posts: [
             {
               id: 1,
-              postUuid: '...',
+              postUuid: '01JZ644RN20G8VEFSNY09069AD',
               title: '오늘의 인증글',
-              userUuid: '01JYKVN18',
+              userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
               challengeUuid: '01JZ644RN20G8VEFSNY09069AD',
-              content: '인증 내용',
+              content: '오늘 헬스장에서 3시간 운동했어요! 💪',
               imageUrl: ['https://example.com/image.jpg'],
               isPublic: true,
+              views: 10,
               createdAt: '2025-07-02T16:27:33.105Z',
               updatedAt: '2025-07-02T16:40:59.340Z',
+              user: {
+                userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
+                nickname: '사용자닉네임',
+                profileImage: 'https://example.com/profile.jpg',
+              },
             },
           ],
         },

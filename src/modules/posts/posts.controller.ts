@@ -19,10 +19,9 @@ import {
   ApiGetUserPosts,
   ApiGetPostDetail,
   ApiUpdatePost,
-  ApiGetGroupPosts,
+  ApiGetPostsByChallenge,
   ApiGetMyPosts,
 } from './decorators/posts.swagger';
-import { FindGroupPostsDto } from './dto/find-group-posts.dto';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 
@@ -62,13 +61,10 @@ export class PostsController {
     @Query('page') page = 1,
     @Query('limit') limit = 10,
   ) {
-    const pageNumber = parseInt(page as any, 10);
-    const limitNumber = parseInt(limit as any, 10);
-
     return await this.postsService.getPostsByUserUuid(
       userUuid,
-      pageNumber,
-      limitNumber,
+      Number(page),
+      Number(limit),
     );
   }
 
@@ -144,19 +140,19 @@ export class PostsController {
   }
 
   /**
-   * 그룹 게시글 조회
-   * @param groupId 그룹 ID
-   * @param findGroupPostsDto 조회 옵션
-   * @param userUuid 사용자 UUID
-   * @returns 그룹원들의 게시글 목록
+   * 특정 챌린지의 게시글 목록 조회 (페이지네이션)
    */
-  @Get('group/:groupId')
-  @ApiGetGroupPosts()
-  findGroupPosts(
-    @Param('groupId') groupId: string,
-    @Query() findGroupPostsDto: FindGroupPostsDto,
-    @UserUuid() userUuid: string,
+  @Get('/challenge/:challengeUuid')
+  @ApiGetPostsByChallenge()
+  async getPostsByChallenge(
+    @Param('challengeUuid') challengeUuid: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
   ) {
-    return null;
+    return await this.postsService.getPostsByChallenge(
+      challengeUuid,
+      Number(page),
+      Number(limit),
+    );
   }
 }

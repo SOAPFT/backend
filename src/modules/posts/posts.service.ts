@@ -196,4 +196,26 @@ export class PostsService {
       message: '게시글이 삭제되었습니다.',
     };
   }
+
+  // 그룹 게시글 조회
+  async getPostsByChallenge(
+    challengeUuid: string,
+    page: number,
+    limit: number,
+  ) {
+    const [posts, total] = await this.postRepository.findAndCount({
+      where: { challengeUuid },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      message: '챌린지 게시글 목록 조회 성공',
+      total,
+      page,
+      limit,
+      posts,
+    };
+  }
 }

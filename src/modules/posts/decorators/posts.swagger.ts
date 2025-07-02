@@ -440,160 +440,55 @@ export function ApiGetUserPosts() {
   );
 }
 
-/**
- * 그룹 게시글 조회 API
- */
-export function ApiGetGroupPosts() {
+// 챌린지 게시글 목록
+export function ApiGetPostsByChallenge() {
   return applyDecorators(
     ApiOperation({
-      summary: '그룹 게시글 조회',
-      description:
-        '특정 그룹(챌린지)에 속한 모든 참여자들의 게시글을 조회합니다.',
+      summary: '챌린지 게시글 목록 조회',
+      description: '특정 챌린지의 게시글을 페이지네이션으로 조회합니다.',
     }),
-    ApiBearerAuth(),
     ApiParam({
-      name: 'groupId',
-      description: '조회할 그룹(챌린지) ID',
-      type: 'string',
-      example: '01HXX2X2X2X2X2X2X2X2X2X2X2',
+      name: 'challengeUuid',
+      description: '조회할 챌린지 UUID',
+      type: String,
     }),
     ApiQuery({
       name: 'page',
-      description: '페이지 번호 (1부터 시작)',
-      type: 'number',
-      example: 1,
       required: false,
+      type: Number,
+      description: '페이지 번호 (기본값: 1)',
     }),
     ApiQuery({
       name: 'limit',
-      description: '페이지당 게시글 수',
-      type: 'number',
-      example: 10,
       required: false,
-    }),
-    ApiQuery({
-      name: 'sortBy',
-      description: '정렬 기준',
-      enum: ['latest', 'oldest', 'likes'],
-      example: 'latest',
-      required: false,
+      type: Number,
+      description: '페이지당 항목 수 (기본값: 10)',
     }),
     ApiResponse({
       status: 200,
-      description: '그룹 게시글 조회 성공',
+      description: '챌린지 게시글 목록 조회 성공',
       schema: {
-        type: 'object',
-        properties: {
-          success: {
-            type: 'boolean',
-            example: true,
-            description: '성공 여부',
-          },
-          data: {
-            type: 'object',
-            properties: {
-              posts: {
-                type: 'array',
-                description: '게시글 목록',
-                items: {
-                  type: 'object',
-                  properties: {
-                    postUuid: {
-                      type: 'string',
-                      example: '01HXX1X1X1X1X1X1X1X1X1X1X1',
-                      description: '게시글 ULID',
-                    },
-                    content: {
-                      type: 'string',
-                      example: '오늘 운동 완료했습니다!',
-                      description: '게시글 내용',
-                    },
-                    imageUrl: {
-                      type: 'array',
-                      items: { type: 'string' },
-                      example: ['https://example.com/image.jpg'],
-                      description: '이미지 URL 배열',
-                    },
-                    likeCount: {
-                      type: 'number',
-                      example: 5,
-                      description: '좋아요 수',
-                    },
-                    commentCount: {
-                      type: 'number',
-                      example: 3,
-                      description: '댓글 수',
-                    },
-                    createdAt: {
-                      type: 'string',
-                      format: 'date-time',
-                      example: '2025-06-22T12:00:00.000Z',
-                      description: '생성 시각',
-                    },
-                    author: {
-                      type: 'object',
-                      properties: {
-                        userUuid: {
-                          type: 'string',
-                          example: '01HXX3X3X3X3X3X3X3X3X3X3X3',
-                          description: '작성자 UUID',
-                        },
-                        nickname: {
-                          type: 'string',
-                          example: 'user123',
-                          description: '작성자 닉네임',
-                        },
-                        profileImage: {
-                          type: 'string',
-                          example: 'https://example.com/profile.jpg',
-                          description: '작성자 프로필 이미지',
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-              pagination: {
-                type: 'object',
-                properties: {
-                  currentPage: {
-                    type: 'number',
-                    example: 1,
-                    description: '현재 페이지',
-                  },
-                  totalPages: {
-                    type: 'number',
-                    example: 5,
-                    description: '전체 페이지 수',
-                  },
-                  totalItems: {
-                    type: 'number',
-                    example: 50,
-                    description: '전체 게시글 수',
-                  },
-                  itemsPerPage: {
-                    type: 'number',
-                    example: 10,
-                    description: '페이지당 게시글 수',
-                  },
-                },
-              },
+        example: {
+          message: '챌린지 게시글 목록 조회 성공',
+          total: 100,
+          page: 1,
+          limit: 10,
+          posts: [
+            {
+              id: 1,
+              postUuid: '...',
+              title: '오늘의 인증글',
+              userUuid: '01JYKVN18',
+              challengeUuid: '01JZ644RN20G8VEFSNY09069AD',
+              content: '인증 내용',
+              imageUrl: ['https://example.com/image.jpg'],
+              isPublic: true,
+              createdAt: '2025-07-02T16:27:33.105Z',
+              updatedAt: '2025-07-02T16:40:59.340Z',
             },
-          },
+          ],
         },
       },
     }),
-    ApiResponse(
-      createErrorResponse('CHALLENGE_003', '존재하지 않는 챌린지입니다.', 404),
-    ),
-    ApiResponse(
-      createErrorResponse(
-        'CHALLENGE_009',
-        '챌린지에 참여하지 않은 사용자입니다.',
-        403,
-      ),
-    ),
-    ApiResponse(CommonAuthResponses.Unauthorized),
-    ApiResponse(CommonErrorResponses.InternalServerError),
   );
 }

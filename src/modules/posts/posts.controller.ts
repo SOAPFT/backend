@@ -17,7 +17,7 @@ import {
   ApiCreatePost,
   ApiDeletePost,
   ApiGetUserPosts,
-  ApiGetPostById,
+  ApiGetPostDetail,
   ApiUpdatePost,
   ApiGetGroupPosts,
   ApiGetMyPosts,
@@ -99,12 +99,9 @@ export class PostsController {
    * @returns 게시글 상세 정보
    */
   @Get(':postUuid')
-  @ApiGetPostById()
-  findOnePost(
-    @Param('postUuid') postUuid: string,
-    @UserUuid() userUuid: string,
-  ) {
-    return null;
+  @ApiGetPostDetail()
+  async findOnePost(@Param('postUuid') postUuid: string) {
+    return await this.postsService.getPostDetail(postUuid);
   }
 
   /**

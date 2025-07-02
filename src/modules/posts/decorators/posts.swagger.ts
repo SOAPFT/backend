@@ -199,79 +199,67 @@ export function ApiGetMyPosts() {
   );
 }
 
-export function ApiGetPostById() {
+// 게시글 상세 조회
+export function ApiGetPostDetail() {
   return applyDecorators(
     ApiOperation({
-      summary: '인증글 상세 조회',
-      description: '특정 인증글의 상세 정보를 조회합니다.',
+      summary: '게시글 상세 조회',
+      description: '게시글의 상세 내용을 조회합니다.',
     }),
     ApiParam({
       name: 'postUuid',
-      description: '인증글 UUID',
-      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+      description: '조회할 게시글 ULID',
+      type: String,
     }),
     ApiResponse({
       status: 200,
-      description: '인증글 조회 성공',
+      description: '게시글 상세 조회 성공',
       schema: {
-        type: 'object',
-        properties: {
-          postUuid: { type: 'string', example: '01HZQK5J8X2M3N4P5Q6R7S8T9V' },
-          content: {
-            type: 'string',
-            example: '오늘 헬스장에서 2시간 운동했어요! 💪',
-          },
-          imageUrl: {
-            type: 'array',
-            items: { type: 'string' },
-            example: [
-              'https://soapft-bucket.s3.amazonaws.com/images/workout1.jpg',
+        example: {
+          message: '게시글 상세 조회 성공',
+          post: {
+            id: 2,
+            postUuid: '01JZ5ZE1BANYQXND8XX8DESPXM',
+            title: '오늘의 인증글 제목',
+            challengeUuid: '01JZ13GQ31DJAY0GVF5F69HEH2',
+            content: '오늘 헬스장에서 3시간 운동했어요! 💪',
+            imageUrl: [
+              'https://soapft-bucket.s3.amazonaws.com/images/workout2.jpg',
             ],
-          },
-          author: {
-            type: 'object',
-            properties: {
-              userUuid: {
-                type: 'string',
-                example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-              },
-              nickname: { type: 'string', example: '운동러버' },
-              profileImage: {
-                type: 'string',
-                example: 'https://example.com/profile.jpg',
-              },
+            isPublic: true,
+            createdAt: '2025-07-02T16:27:33.105Z',
+            updatedAt: '2025-07-02T16:40:59.340Z',
+            userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
+            user: {
+              userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
+              nickname: '헬스왕',
+              profileImage: 'https://example.com/profile.jpg',
             },
-          },
-          challenge: {
-            type: 'object',
-            properties: {
-              challengeUuid: {
-                type: 'string',
-                example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-              },
-              title: { type: 'string', example: '30일 헬스 챌린지' },
-            },
-          },
-          likeCount: { type: 'number', example: 15 },
-          commentCount: { type: 'number', example: 3 },
-          isLiked: { type: 'boolean', example: false },
-          createdAt: {
-            type: 'string',
-            format: 'date-time',
-            example: '2025-06-22T12:00:00Z',
-          },
-          updatedAt: {
-            type: 'string',
-            format: 'date-time',
-            example: '2025-06-22T12:00:00Z',
           },
         },
       },
     }),
-    ApiResponse(
-      createErrorResponse('POST_001', '인증글을 찾을 수 없습니다.', 404),
-    ),
-    ApiResponse(CommonErrorResponses.InternalServerError),
+    ApiResponse({
+      status: 404,
+      description: 'POST_001: 해당 게시글이 없습니다.',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'POST_001' },
+          message: { type: 'string', example: '해당 게시글이 없습니다.' },
+          timestamp: { type: 'string', format: 'date-time' },
+          details: {
+            type: 'object',
+            properties: {
+              postUuid: {
+                type: 'string',
+                example: '01JZ13GQ31DJAY0GVF5F69HEH2',
+              },
+            },
+          },
+        },
+      },
+    }),
   );
 }
 

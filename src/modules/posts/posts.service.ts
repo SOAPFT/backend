@@ -125,4 +125,47 @@ export class PostsService {
       posts,
     };
   }
+
+  // 게시글 상세 조회
+  async getPostDetail(postUuid: string) {
+    const post = await this.postRepository.findOne({
+      where: { postUuid },
+    });
+
+    if (!post) {
+      CustomException.throw(
+        ErrorCode.POST_NOT_FOUND,
+        '해당 게시글을 찾을 수 없습니다.',
+      );
+    }
+
+    // 사용자 정보 조회
+    const user = await this.userRepository.findOne({
+      where: { userUuid: post.userUuid },
+      select: ['userUuid', 'nickname', 'profileImage'],
+    });
+
+    return {
+      message: '게시글 상세 조회 성공',
+      post: {
+        id: post.id,
+        postUuid: post.postUuid,
+        title: post.title,
+        challengeUuid: post.challengeUuid,
+        content: post.content,
+        imageUrl: post.imageUrl,
+        isPublic: post.isPublic,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        userUuid: post.userUuid,
+        user: user
+          ? {
+              userUuid: user.userUuid,
+              nickname: user.nickname,
+              profileImage: user.profileImage,
+            }
+          : null,
+      },
+    };
+  }
 }

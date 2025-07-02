@@ -136,11 +136,11 @@ export class PostsController {
    */
   @Delete(':postUuid')
   @ApiDeletePost()
-  removePost(
+  async deletePost(
     @Param('postUuid') postUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.postsService.deletePost(postUuid, userUuid);
   }
 
   /**

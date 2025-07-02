@@ -264,42 +264,58 @@ export function ApiGetPostDetail() {
   );
 }
 
+// 게시글 삭제
 export function ApiDeletePost() {
   return applyDecorators(
     ApiOperation({
-      summary: '인증글 삭제',
-      description: '작성한 인증글을 삭제합니다.',
+      summary: '게시글 삭제',
+      description: '특정 게시글을 삭제합니다.',
     }),
-    ApiBearerAuth(),
     ApiParam({
       name: 'postUuid',
-      description: '인증글 UUID',
-      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+      description: '삭제할 게시글 ULID',
+      type: String,
     }),
     ApiResponse({
       status: 200,
-      description: '인증글 삭제 성공',
+      description: '게시글 삭제 성공',
       schema: {
-        type: 'object',
-        properties: {
-          message: {
-            type: 'string',
-            example: '인증글이 삭제되었습니다.',
-          },
+        example: {
+          message: '게시글이 삭제되었습니다.',
         },
       },
     }),
     ApiResponse({
-      status: 401,
-      description: '인증되지 않은 사용자',
+      status: 404,
+      description: 'POST_001: 해당 게시글을 찾을 수 없습니다.',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'POST_001' },
+          message: {
+            type: 'string',
+            example: '해당 게시글을 찾을 수 없습니다.',
+          },
+          timestamp: { type: 'string', format: 'date-time' },
+          details: { type: 'object' },
+        },
+      },
     }),
     ApiResponse({
       status: 403,
-      description: '삭제 권한 없음',
-    }),
-    ApiResponse({
-      status: 404,
-      description: '인증글을 찾을 수 없음',
+      description: 'POST_002: 해당 포스트에 접근할 수 없습니다.',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'POST_002' },
+          message: {
+            type: 'string',
+            example: '해당 포스트에 접근할 수 없습니다.',
+          },
+          timestamp: { type: 'string', format: 'date-time' },
+          details: { type: 'object' },
+        },
+      },
     }),
   );
 }

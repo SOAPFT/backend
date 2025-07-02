@@ -169,4 +169,31 @@ export class PostsService {
       },
     };
   }
+
+  // 게시글 삭제
+  async deletePost(postUuid: string, userUuid: string) {
+    const post = await this.postRepository.findOne({
+      where: { postUuid },
+    });
+
+    if (!post) {
+      CustomException.throw(
+        ErrorCode.POST_NOT_FOUND,
+        '해당 게시글을 찾을 수 없습니다.',
+      );
+    }
+
+    if (post.userUuid !== userUuid) {
+      CustomException.throw(
+        ErrorCode.POST_ACCESS_DENIED,
+        '해당 게시글을 삭제할 권한이 없습니다.',
+      );
+    }
+
+    await this.postRepository.remove(post);
+
+    return {
+      message: '게시글이 삭제되었습니다.',
+    };
+  }
 }

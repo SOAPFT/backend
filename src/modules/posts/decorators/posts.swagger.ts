@@ -12,90 +12,140 @@ import {
   CommonAuthResponses,
   CommonErrorResponses,
 } from '../../../decorators/swagger.decorator';
+import { UpdatePostDto } from '../dto/update-post.dto';
+import { CreatePostDto } from '../dto/create-post.dto';
 
 export function ApiCreatePost() {
   return applyDecorators(
     ApiOperation({
-      summary: '인증글 생성',
-      description: '새로운 인증글을 생성합니다.',
+      summary: '사용자 게시글 생성',
+      description: '게시글 생성 정보를 받아 새로운 게시글을 생성합니다.',
     }),
-    ApiBearerAuth(),
     ApiBody({
-      schema: {
-        type: 'object',
-        required: ['content'],
-        properties: {
-          content: {
-            type: 'string',
-            description: '인증글 내용',
-            example: '오늘 헬스장에서 2시간 운동했어요! 💪',
-          },
-          imageUrl: {
-            type: 'array',
-            items: {
-              type: 'string',
-            },
-            description: '인증 이미지 URL 배열',
-            example: [
-              'https://soapft-bucket.s3.amazonaws.com/images/workout1.jpg',
-            ],
-          },
-          challengeUuid: {
-            type: 'string',
-            description: '챌린지 UUID (챌린지 인증글인 경우)',
-            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-          },
-        },
-      },
+      type: CreatePostDto,
     }),
     ApiResponse({
       status: 201,
-      description: '인증글이 성공적으로 생성됨',
+      description: '게시글 생성 성공',
       schema: {
-        type: 'object',
-        properties: {
-          postUuid: {
-            type: 'string',
-            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+        example: {
+          message: '게시물이 생성되었습니다.',
+          post: {
+            id: 1,
+            postUuid: '01JZ13GQ31DJAY0GVF5F69HEH1',
+            title: '제목 예시',
+            userUuid: '01JZ13GQ31DJAY0GVF5F69HEH1',
+            challengeUuid: '01JZ13GQ31DJAY0GVF5F69HEH2',
+            content: '내용 예시',
+            imageUrl: ['https://example.com/image1.jpg'],
+            isPublic: true,
+            createdAt: '2025-07-02T09:00:00.000Z',
+            updatedAt: '2025-07-02T09:00:00.000Z',
           },
-          content: {
-            type: 'string',
-            example: '오늘 헬스장에서 2시간 운동했어요! 💪',
-          },
-          imageUrl: {
-            type: 'array',
-            items: { type: 'string' },
-            example: [
-              'https://soapft-bucket.s3.amazonaws.com/images/workout1.jpg',
-            ],
-          },
-          authorUuid: {
-            type: 'string',
-            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-          },
-          challengeUuid: {
-            type: 'string',
-            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-          },
-          likeCount: {
-            type: 'number',
-            example: 0,
-          },
-          commentCount: {
-            type: 'number',
-            example: 0,
-          },
-          createdAt: {
-            type: 'string',
-            format: 'date-time',
-            example: '2025-06-22T12:00:00Z',
+        },
+      },
+    }),
+  );
+}
+
+export function ApiUpdatePost() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '게시글 수정',
+      description: '게시글을 수정합니다. 작성자 본인만 수정할 수 있습니다.',
+    }),
+    ApiParam({
+      name: 'postUuid',
+      type: String,
+      description: '수정할 게시글 UUID',
+      example: '01JZ13GQ31DJAY0GVF5F69HEH2',
+    }),
+    ApiBody({
+      type: UpdatePostDto,
+      description: '수정할 게시글 정보',
+      examples: {
+        default: {
+          summary: '게시글 수정 예시',
+          value: {
+            title: '오늘의 인증글 제목 수정',
+            content: '오늘은 이렇게 운동했습니다. 수정본!',
+            imageUrl: ['https://example.com/image1.jpg'],
+            isPublic: true,
           },
         },
       },
     }),
     ApiResponse({
-      status: 401,
-      description: '인증되지 않은 사용자',
+      status: 200,
+      description: '게시글 수정 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          message: { type: 'string', example: '게시글이 수정되었습니다.' },
+          post: {
+            type: 'object',
+            properties: {
+              id: { type: 'number', example: 1 },
+              postUuid: {
+                type: 'string',
+                example: '01JZ13GQ31DJAY0GVF5F69HEH2',
+              },
+              title: { type: 'string', example: '오늘의 인증글 제목 수정' },
+              content: {
+                type: 'string',
+                example: '오늘은 이렇게 운동했습니다. 수정본!',
+              },
+              imageUrl: {
+                type: 'array',
+                items: {
+                  type: 'string',
+                  example: 'https://example.com/image1.jpg',
+                },
+              },
+              isPublic: { type: 'boolean', example: true },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'POST_001: 해당 게시글이 없습니다.',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'POST_001' },
+          message: { type: 'string', example: '해당 게시글이 없습니다.' },
+          timestamp: { type: 'string', format: 'date-time' },
+          details: {
+            type: 'object',
+            properties: {
+              postUuid: {
+                type: 'string',
+                example: '01JZ13GQ31DJAY0GVF5F69HEH2',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 403,
+      description: 'POST_002: 해당 포스트에 접근할 수 없습니다.',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'POST_002' },
+          message: {
+            type: 'string',
+            example: '해당 포스트에 접근할 수 없습니다.',
+          },
+          timestamp: { type: 'string', format: 'date-time' },
+          details: {},
+        },
+      },
     }),
   );
 }
@@ -273,61 +323,6 @@ export function ApiGetPostById() {
     ApiResponse(
       createErrorResponse('POST_001', '인증글을 찾을 수 없습니다.', 404),
     ),
-    ApiResponse(CommonErrorResponses.InternalServerError),
-  );
-}
-
-export function ApiUpdatePost() {
-  return applyDecorators(
-    ApiOperation({
-      summary: '인증글 수정',
-      description: '작성한 인증글을 수정합니다.',
-    }),
-    ApiBearerAuth(),
-    ApiParam({
-      name: 'postUuid',
-      description: '인증글 UUID',
-      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-    }),
-    ApiBody({
-      schema: {
-        type: 'object',
-        properties: {
-          content: {
-            type: 'string',
-            description: '수정할 인증글 내용',
-            example: '오늘 헬스장에서 3시간 운동했어요! 💪',
-          },
-          imageUrl: {
-            type: 'array',
-            items: { type: 'string' },
-            description: '수정할 이미지 URL 배열',
-            example: [
-              'https://soapft-bucket.s3.amazonaws.com/images/workout2.jpg',
-            ],
-          },
-        },
-      },
-    }),
-    ApiResponse({
-      status: 200,
-      description: '인증글 수정 성공',
-    }),
-    ApiResponse(CommonAuthResponses.Unauthorized),
-    ApiResponse(
-      createErrorResponse(
-        'POST_004',
-        '본인의 인증글만 수정할 수 있습니다.',
-        403,
-      ),
-    ),
-    ApiResponse(
-      createErrorResponse('POST_001', '인증글을 찾을 수 없습니다.', 404),
-    ),
-    ApiResponse(
-      createErrorResponse('POST_003', '인증글 내용은 필수입니다.', 400),
-    ),
-    ApiResponse(CommonErrorResponses.ValidationFailed),
     ApiResponse(CommonErrorResponses.InternalServerError),
   );
 }

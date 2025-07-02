@@ -42,11 +42,11 @@ export class PostsController {
    */
   @Post()
   @ApiCreatePost()
-  createPost(
+  async createPost(
     @Body() createPostDto: CreatePostDto,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.postsService.createPost(createPostDto, userUuid);
   }
 
   /**
@@ -100,12 +100,16 @@ export class PostsController {
    */
   @Patch(':postUuid')
   @ApiUpdatePost()
-  updatePost(
+  async updatePost(
     @Param('postUuid') postUuid: string,
     @Body() updatePostDto: UpdatePostDto,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.postsService.updatePost(
+      postUuid,
+      updatePostDto,
+      userUuid,
+    );
   }
 
   /**

@@ -10,7 +10,6 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, Repository } from 'typeorm';
-import { FindAllPostsDto } from './dto/find-all-posts.dto';
 import { Post } from '@/entities/post.entity';
 
 import { CustomException } from '@/utils/custom-exception';
@@ -88,6 +87,42 @@ export class PostsService {
     return {
       message: '게시글이 수정되었습니다.',
       post,
+    };
+  }
+
+  // 자신의 게시글 조회
+  async getPostsByUserUuid(userUuid: string, page = 1, limit = 10) {
+    const [posts, total] = await this.postRepository.findAndCount({
+      where: { userUuid },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      message: '사용자 게시글 조회 성공',
+      total,
+      page,
+      limit,
+      posts,
+    };
+  }
+
+  // 특정 사용자 게시글 목록 조회
+  async getUserPosts(userUuid: string, page: number, limit: number) {
+    const [posts, total] = await this.postRepository.findAndCount({
+      where: { userUuid },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      message: '사용자 게시글 목록 조회 성공',
+      total,
+      page,
+      limit,
+      posts,
     };
   }
 }

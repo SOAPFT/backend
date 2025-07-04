@@ -28,6 +28,8 @@ export class PostsService {
     private challengeService: ChallengeService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Comment)
+    private commentRepository: Repository<Comment>,
     private userService: UsersService,
   ) {}
 
@@ -212,6 +214,19 @@ export class PostsService {
     const likeCounts =
       await this.likesService.getLikeCountsByPostIds(postUuids);
 
+    const commentCountsArray = await this.commentRepository
+      .createQueryBuilder('comment')
+      .select('comment.postUuid', 'postUuid')
+      .addSelect('COUNT(comment.id)', 'count')
+      .where('comment.postUuid IN (:...postUuids)', { postUuids })
+      .groupBy('comment.postUuid')
+      .getRawMany();
+
+    const commentCounts = new Map<string, number>();
+    commentCountsArray.forEach((c) =>
+      commentCounts.set(c.postUuid, parseInt(c.count)),
+    );
+
     // 각 게시글의 userUuid로 사용자 정보 조회 후 병합
     const postsWithUserAndLike = await Promise.all(
       posts.map(async (post) => {
@@ -230,6 +245,7 @@ export class PostsService {
               }
             : null,
           likeCount: likeCounts.get(post.postUuid) || 0,
+          commentCount: commentCounts.get(post.postUuid) || 0,
         };
       }),
     );

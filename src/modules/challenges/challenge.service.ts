@@ -447,6 +447,7 @@ export class ChallengeService {
         participantCount: participantUuid.length,
         startDate,
         endDate,
+        goal: challenge.goal,
       },
       totalAchievementRate,
     };

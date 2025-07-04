@@ -2,7 +2,6 @@ import { applyDecorators } from '@nestjs/common';
 import {
   ApiOperation,
   ApiResponse,
-  ApiBody,
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
@@ -15,22 +14,16 @@ import {
 export function ApiCreateLike() {
   return applyDecorators(
     ApiOperation({
-      summary: '좋아요',
-      description: '인증글에 좋아요를 추가합니다.',
+      summary: '게시글 좋아요 추가',
+      description:
+        '특정 게시글에 좋아요를 추가합니다. 이미 좋아요한 경우 에러가 발생합니다.',
     }),
     ApiBearerAuth(),
-    ApiBody({
-      schema: {
-        type: 'object',
-        required: ['postUuid'],
-        properties: {
-          postUuid: {
-            type: 'string',
-            description: '인증글 UUID',
-            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-          },
-        },
-      },
+    ApiParam({
+      name: 'postUuid',
+      description: '게시글 UUID',
+      required: true,
+      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
     }),
     ApiResponse({
       status: 201,
@@ -41,29 +34,33 @@ export function ApiCreateLike() {
           id: {
             type: 'number',
             example: 123,
+            description: '생성된 좋아요 ID',
           },
           postUuid: {
             type: 'string',
             example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+            description: '좋아요된 게시글 UUID',
           },
           userUuid: {
             type: 'string',
             example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+            description: '좋아요한 사용자 UUID',
           },
           createdAt: {
             type: 'string',
             format: 'date-time',
             example: '2025-06-22T12:00:00Z',
+            description: '좋아요 생성 일시',
           },
         },
       },
     }),
     ApiResponse(
-      createErrorResponse('LIKE_001', '이미 좋아요한 인증글입니다.', 400),
+      createErrorResponse('LIKE_001', '이미 좋아요한 게시글입니다.', 400),
     ),
     ApiResponse(CommonAuthResponses.Unauthorized),
     ApiResponse(
-      createErrorResponse('POST_001', '인증글을 찾을 수 없습니다.', 404),
+      createErrorResponse('POST_001', '게시글을 찾을 수 없습니다.', 404),
     ),
     ApiResponse(CommonErrorResponses.ValidationFailed),
     ApiResponse(CommonErrorResponses.InternalServerError),

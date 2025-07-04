@@ -25,7 +25,7 @@ export class Comment {
   parentCommentId: number;
 
   /** 댓글 내용 */
-  @Column({ name: 'content', type: 'varchar' })
+  @Column({ name: 'content', type: 'text' })
   content: string;
 
   /** 언급된 사용자 닉네임 배열 (@user 형태) */

@@ -13,7 +13,6 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ApiCreateComment,
   ApiGetAllComments,
-  ApiGetComment,
   ApiUpdateComment,
   ApiDeleteComment,
 } from './decorators/comments.swagger';
@@ -39,11 +38,11 @@ export class CommentsController {
    */
   @Post()
   @ApiCreateComment()
-  createComment(
+  async createComment(
     @Body() createCommentDto: CreateCommentDto,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.commentsService.createComment(createCommentDto, userUuid);
   }
 
   /**
@@ -57,20 +56,6 @@ export class CommentsController {
   findAllComments(
     @Param('postUuid') postUuid: string,
     @Query() findAllCommentsDto: FindAllCommentsDto,
-    @UserUuid() userUuid: string,
-  ) {
-    return null;
-  }
-
-  /**
-   * 댓글 상세 조회
-   * @param commentId 댓글 ID
-   * @returns 댓글 상세 정보
-   */
-  @Get(':commentId')
-  @ApiGetComment()
-  findOneComment(
-    @Param('commentId') commentId: string,
     @UserUuid() userUuid: string,
   ) {
     return null;

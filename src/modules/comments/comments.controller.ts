@@ -13,7 +13,6 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ApiCreateComment,
   ApiGetAllComments,
-  ApiGetComment,
   ApiUpdateComment,
   ApiDeleteComment,
 } from './decorators/comments.swagger';
@@ -39,11 +38,11 @@ export class CommentsController {
    */
   @Post()
   @ApiCreateComment()
-  createComment(
+  async createComment(
     @Body() createCommentDto: CreateCommentDto,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.commentsService.createComment(createCommentDto, userUuid);
   }
 
   /**
@@ -54,26 +53,17 @@ export class CommentsController {
    */
   @Get('post/:postUuid')
   @ApiGetAllComments()
-  findAllComments(
+  async findAllComments(
     @Param('postUuid') postUuid: string,
     @Query() findAllCommentsDto: FindAllCommentsDto,
     @UserUuid() userUuid: string,
   ) {
-    return null;
-  }
-
-  /**
-   * 댓글 상세 조회
-   * @param commentId 댓글 ID
-   * @returns 댓글 상세 정보
-   */
-  @Get(':commentId')
-  @ApiGetComment()
-  findOneComment(
-    @Param('commentId') commentId: string,
-    @UserUuid() userUuid: string,
-  ) {
-    return null;
+    return await this.commentsService.findAllComments(
+      postUuid,
+      findAllCommentsDto.page,
+      findAllCommentsDto.limit,
+      userUuid,
+    );
   }
 
   /**
@@ -85,12 +75,16 @@ export class CommentsController {
    */
   @Patch(':commentId')
   @ApiUpdateComment()
-  updateComment(
-    @Param('commentId') commentId: string,
+  async updateComment(
+    @Param('commentId') commentId: number,
     @Body() updateCommentDto: UpdateCommentDto,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.commentsService.updateComment(
+      +commentId,
+      updateCommentDto,
+      userUuid,
+    );
   }
 
   /**
@@ -101,10 +95,10 @@ export class CommentsController {
    */
   @Delete(':commentId')
   @ApiDeleteComment()
-  removeComment(
-    @Param('commentId') commentId: string,
+  async removeComment(
+    @Param('commentId') commentId: number,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.commentsService.removeComment(commentId, userUuid);
   }
 }

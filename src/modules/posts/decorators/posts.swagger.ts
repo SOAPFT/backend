@@ -3,15 +3,9 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
-  ApiBearerAuth,
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
-import {
-  createErrorResponse,
-  CommonAuthResponses,
-  CommonErrorResponses,
-} from '../../../decorators/swagger.decorator';
 import { UpdatePostDto } from '../dto/update-post.dto';
 import { CreatePostDto } from '../dto/create-post.dto';
 
@@ -321,82 +315,8 @@ export function ApiDeletePost() {
   );
 }
 
-export function ApiGetPopularPosts() {
-  return applyDecorators(
-    ApiOperation({
-      summary: '인기 인증글 조회',
-      description: '좋아요가 많은 인기 인증글을 조회합니다.',
-    }),
-    ApiQuery({
-      name: 'limit',
-      required: false,
-      description: '조회할 인증글 수 (기본값: 10)',
-      example: 10,
-    }),
-    ApiQuery({
-      name: 'period',
-      required: false,
-      description: '기간 (daily, weekly, monthly)',
-      example: 'weekly',
-    }),
-    ApiResponse({
-      status: 200,
-      description: '인기 인증글 조회 성공',
-      schema: {
-        type: 'object',
-        properties: {
-          posts: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                postUuid: {
-                  type: 'string',
-                  example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-                },
-                content: {
-                  type: 'string',
-                  example: '오늘 헬스장에서 2시간 운동했어요! 💪',
-                },
-                imageUrl: {
-                  type: 'array',
-                  items: { type: 'string' },
-                  example: [
-                    'https://soapft-bucket.s3.amazonaws.com/images/workout1.jpg',
-                  ],
-                },
-                author: {
-                  type: 'object',
-                  properties: {
-                    userUuid: {
-                      type: 'string',
-                      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
-                    },
-                    nickname: { type: 'string', example: '운동러버' },
-                    profileImage: {
-                      type: 'string',
-                      example: 'https://example.com/profile.jpg',
-                    },
-                  },
-                },
-                likeCount: { type: 'number', example: 150 },
-                commentCount: { type: 'number', example: 23 },
-                createdAt: {
-                  type: 'string',
-                  format: 'date-time',
-                  example: '2025-06-22T12:00:00Z',
-                },
-              },
-            },
-          },
-        },
-      },
-    }),
-  );
-}
-
 /**
- * 닉네임으로 사용자 게시글 조회 API
+ * userUuid로 사용자 게시글 조회 API
  */
 export function ApiGetUserPosts() {
   return applyDecorators(

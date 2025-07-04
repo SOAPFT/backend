@@ -1,15 +1,10 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Like } from '@/entities/like.entity';
-import { CreateLikeDto } from './dto/create-like.dto';
 import { UsersService } from '../users/users.service';
+import { CustomException } from '@/utils/custom-exception';
+import { ErrorCode } from '@/types/error-code.enum';
 
 @Injectable()
 export class LikesService {
@@ -25,29 +20,32 @@ export class LikesService {
    * @param createLikeDto 좋아요 생성 정보
    * @returns 생성된 좋아요 정보와 좋아요 수
    */
-  async createLike(createLikeDto: CreateLikeDto, userUuid: string) {
+  async createLike(postUuid: string, userUuid: string) {
     // 이미 좋아요한 게시글인지 확인
     const existingLike = await this.likeRepository.findOne({
       where: {
-        postUuid: createLikeDto.postUuid,
+        postUuid,
         userUuid,
       },
     });
 
     if (existingLike) {
-      throw new ConflictException('이미 좋아요한 게시글입니다.');
+      CustomException.throw(
+        ErrorCode.ALREADY_LIKED,
+        '이미 좋아요한 게시글입니다.',
+      );
     }
 
     // 좋아요 생성
     const like = this.likeRepository.create({
-      ...createLikeDto,
+      postUuid,
       userUuid,
     });
 
     await this.likeRepository.save(like);
 
     // 게시글의 전체 좋아요 수 조회
-    const likeCount = await this.getLikeCountByPostId(createLikeDto.postUuid);
+    const likeCount = await this.getLikeCountByPostId(postUuid);
 
     return {
       id: like.id,
@@ -100,9 +98,11 @@ export class LikesService {
     });
 
     if (!like) {
-      throw new NotFoundException('해당 게시글에 좋아요를 하지 않았습니다.');
+      CustomException.throw(
+        ErrorCode.NOT_LIKED_POST,
+        '해당 게시글에 좋아요를 하지 않았습니다.',
+      );
     }
-
     await this.likeRepository.delete(like.id);
 
     // 업데이트된 좋아요 수 조회

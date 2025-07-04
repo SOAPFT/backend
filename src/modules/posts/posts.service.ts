@@ -1,15 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import {
-  Injectable,
-  NotFoundException,
-  Inject,
-  forwardRef,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Post } from '@/entities/post.entity';
 
 import { CustomException } from '@/utils/custom-exception';
@@ -17,7 +11,6 @@ import { ErrorCode } from '@/types/error-code.enum';
 import { LikesService } from '@/modules/likes/likes.service';
 import { CommentsService } from '../comments/comments.service';
 import { ChallengeService } from '../challenges/challenge.service';
-import { FindGroupPostsDto } from './dto/find-group-posts.dto';
 import { User } from '@/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import { ulid } from 'ulid';
@@ -214,8 +207,13 @@ export class PostsService {
       take: limit,
     });
 
+    const postUuids = posts.map((post) => post.postUuid);
+
+    const likeCounts =
+      await this.likesService.getLikeCountsByPostIds(postUuids);
+
     // 각 게시글의 userUuid로 사용자 정보 조회 후 병합
-    const postsWithUser = await Promise.all(
+    const postsWithUserAndLike = await Promise.all(
       posts.map(async (post) => {
         const user = await this.userRepository.findOne({
           where: { userUuid: post.userUuid },
@@ -231,6 +229,7 @@ export class PostsService {
                 profileImage: user.profileImage,
               }
             : null,
+          likeCount: likeCounts.get(post.postUuid) || 0,
         };
       }),
     );
@@ -240,7 +239,7 @@ export class PostsService {
       total,
       page,
       limit,
-      posts: postsWithUser,
+      posts: postsWithUserAndLike,
     };
   }
 }

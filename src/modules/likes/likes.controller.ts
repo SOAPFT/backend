@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   Delete,
   Get,
@@ -9,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { LikesService } from './likes.service';
-import { CreateLikeDto } from './dto/create-like.dto';
 import {
   ApiCreateLike,
   ApiDeleteLike,
@@ -30,13 +28,13 @@ export class LikesController {
    * @param createLikeDto 좋아요 생성 정보
    * @returns 생성된 좋아요 정보와 좋아요 수
    */
-  @Post()
+  @Post(':postUuid')
   @ApiCreateLike()
   createLike(
-    @Body() createLikeDto: CreateLikeDto,
+    @Param('postUuid') postUuid: string,
     @UserUuid() userUuid: string,
   ) {
-    return this.likesService.createLike(createLikeDto, userUuid);
+    return this.likesService.createLike(postUuid, userUuid);
   }
 
   /**
@@ -60,7 +58,7 @@ export class LikesController {
    * @param userUuid 사용자 UUID
    * @returns 삭제 성공 메시지와 업데이트된 좋아요 수
    */
-  @Delete('post/:postUuid/user')
+  @Delete(':postUuid')
   @ApiDeleteLike()
   removeLike(
     @Param('postUuid') postUuid: string,

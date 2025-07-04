@@ -9,6 +9,7 @@ import {
 } from '@nestjs/swagger';
 import { createErrorResponse } from '../../../decorators/swagger.decorator';
 import { CreateCommentDto } from '../dto/create-comment.dto';
+import { UpdateCommentDto } from '../dto/update-comment.dto';
 
 export function ApiCreateComment() {
   return applyDecorators(
@@ -148,6 +149,11 @@ export function ApiGetAllComments() {
                   format: 'date-time',
                   example: '2025-07-04T12:00:00Z',
                 },
+                isMyComment: {
+                  type: 'boolean',
+                  example: true,
+                  description: '현재 로그인한 사용자가 작성한 댓글 여부',
+                },
                 user: {
                   type: 'object',
                   properties: {
@@ -180,32 +186,16 @@ export function ApiUpdateComment() {
   return applyDecorators(
     ApiOperation({
       summary: '댓글 수정',
-      description: '작성한 댓글을 수정합니다.',
+      description: '댓글 내용을 수정합니다. 본인 댓글만 수정할 수 있습니다.',
     }),
     ApiBearerAuth(),
     ApiParam({
       name: 'commentId',
       description: '댓글 ID',
-      example: 456,
+      example: 1,
     }),
     ApiBody({
-      schema: {
-        type: 'object',
-        required: ['content'],
-        properties: {
-          content: {
-            type: 'string',
-            description: '수정할 댓글 내용',
-            example: '정말 대단해요! 저도 더 열심히 해야겠어요 💪🔥',
-          },
-          mentionedUserUuids: {
-            type: 'array',
-            items: { type: 'string' },
-            description: '멘션된 사용자 UUID 배열',
-            example: ['01HZQK5J8X2M3N4P5Q6R7S8T9V'],
-          },
-        },
-      },
+      type: UpdateCommentDto,
     }),
     ApiResponse({
       status: 200,
@@ -215,23 +205,46 @@ export function ApiUpdateComment() {
         properties: {
           message: {
             type: 'string',
-            example: '댓글이 수정되었습니다.',
+            example: '댓글이 성공적으로 수정되었습니다.',
+          },
+          comment: {
+            type: 'object',
+            properties: {
+              id: { type: 'number', example: 1 },
+              postUuid: { type: 'string', example: '01HZQ...' },
+              userUuid: { type: 'string', example: '01HZQ...' },
+              content: { type: 'string', example: '수정된 댓글 내용입니다.' },
+              parentCommentId: {
+                type: 'number',
+                example: null,
+                nullable: true,
+              },
+              mentionedUsers: {
+                type: 'array',
+                items: { type: 'string' },
+                example: [],
+              },
+              createdAt: {
+                type: 'string',
+                format: 'date-time',
+                example: '2025-07-04T12:00:00Z',
+              },
+              updatedAt: {
+                type: 'string',
+                format: 'date-time',
+                example: '2025-07-04T12:10:00Z',
+              },
+            },
           },
         },
       },
     }),
-    ApiResponse({
-      status: 401,
-      description: '인증되지 않은 사용자',
-    }),
-    ApiResponse({
-      status: 403,
-      description: '수정 권한 없음',
-    }),
-    ApiResponse({
-      status: 404,
-      description: '댓글을 찾을 수 없음',
-    }),
+    ApiResponse(
+      createErrorResponse('COMMENT_001', '존재하지 않는 댓글입니다.', 404),
+    ),
+    ApiResponse(
+      createErrorResponse('COMMENT_003', '댓글 수정 권한이 없습니다.', 403),
+    ),
   );
 }
 
@@ -239,14 +252,13 @@ export function ApiDeleteComment() {
   return applyDecorators(
     ApiOperation({
       summary: '댓글 삭제',
-      description:
-        '작성한 댓글을 삭제합니다. 대댓글이 있는 경우 내용만 삭제됩니다.',
+      description: '댓글을 삭제합니다. 본인 댓글만 삭제할 수 있습니다.',
     }),
     ApiBearerAuth(),
     ApiParam({
       name: 'commentId',
       description: '댓글 ID',
-      example: 456,
+      example: 1,
     }),
     ApiResponse({
       status: 200,
@@ -256,22 +268,16 @@ export function ApiDeleteComment() {
         properties: {
           message: {
             type: 'string',
-            example: '댓글이 삭제되었습니다.',
+            example: '댓글이 성공적으로 삭제되었습니다.',
           },
         },
       },
     }),
-    ApiResponse({
-      status: 401,
-      description: '인증되지 않은 사용자',
-    }),
-    ApiResponse({
-      status: 403,
-      description: '삭제 권한 없음',
-    }),
-    ApiResponse({
-      status: 404,
-      description: '댓글을 찾을 수 없음',
-    }),
+    ApiResponse(
+      createErrorResponse('COMMENT_001', '존재하지 않는 댓글입니다.', 404),
+    ),
+    ApiResponse(
+      createErrorResponse('COMMENT_003', '댓글 삭제 권한이 없습니다.', 403),
+    ),
   );
 }

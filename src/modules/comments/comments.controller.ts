@@ -53,12 +53,17 @@ export class CommentsController {
    */
   @Get('post/:postUuid')
   @ApiGetAllComments()
-  findAllComments(
+  async findAllComments(
     @Param('postUuid') postUuid: string,
     @Query() findAllCommentsDto: FindAllCommentsDto,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.commentsService.findAllComments(
+      postUuid,
+      findAllCommentsDto.page,
+      findAllCommentsDto.limit,
+      userUuid,
+    );
   }
 
   /**
@@ -70,12 +75,16 @@ export class CommentsController {
    */
   @Patch(':commentId')
   @ApiUpdateComment()
-  updateComment(
-    @Param('commentId') commentId: string,
+  async updateComment(
+    @Param('commentId') commentId: number,
     @Body() updateCommentDto: UpdateCommentDto,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.commentsService.updateComment(
+      +commentId,
+      updateCommentDto,
+      userUuid,
+    );
   }
 
   /**
@@ -86,10 +95,10 @@ export class CommentsController {
    */
   @Delete(':commentId')
   @ApiDeleteComment()
-  removeComment(
-    @Param('commentId') commentId: string,
+  async removeComment(
+    @Param('commentId') commentId: number,
     @UserUuid() userUuid: string,
   ) {
-    return null;
+    return await this.commentsService.removeComment(commentId, userUuid);
   }
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { UpdateCommentDto } from './dto/update-comment.dto';
 import { Comment } from '@/entities/comment.entity';
 import { Post } from '@/entities/post.entity';
 import { User } from '@/entities/user.entity';
@@ -71,7 +72,12 @@ export class CommentsService {
   /*
    * 게시글의 모든 댓글 조회
    */
-  async findAllComments(postUuid: string, page: number, limit: number) {
+  async findAllComments(
+    postUuid: string,
+    page: number,
+    limit: number,
+    userUuid: string,
+  ) {
     const post = await this.postRepository.findOne({
       where: { postUuid },
     });
@@ -101,6 +107,7 @@ export class CommentsService {
     const commentsWithUser = comments.map((comment) => ({
       ...comment,
       user: userMap.get(comment.userUuid) || null,
+      isMyComment: comment.userUuid === userUuid,
       children: [],
     }));
 
@@ -128,6 +135,80 @@ export class CommentsService {
       page,
       limit,
       comments: rootComments,
+    };
+  }
+
+  /*
+   * 댓글 수정
+   */
+  async updateComment(
+    commentId: number,
+    updateCommentDto: UpdateCommentDto,
+    userUuid: string,
+  ) {
+    // 1. 수정할 댓글 존재 여부 확인
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      CustomException.throw(
+        ErrorCode.COMMENT_NOT_FOUND,
+        '존재하지 않는 댓글입니다.',
+      );
+    }
+
+    // 2. 본인 댓글인지 권한 검사
+    if (comment.userUuid !== userUuid) {
+      CustomException.throw(
+        ErrorCode.COMMENT_ACCESS_DENIED,
+        '댓글 수정 권한이 없습니다.',
+      );
+    }
+
+    // 3. 수정 내용 업데이트
+    comment.content = updateCommentDto.content;
+    comment.updatedAt = new Date();
+
+    const updatedComment = await this.commentRepository.save(comment);
+
+    // 4. 최종 반환
+    return {
+      message: '댓글이 성공적으로 수정되었습니다.',
+      comment: updatedComment,
+    };
+  }
+
+  /**
+   * 댓글 삭제
+   */
+  async removeComment(commentId: number, userUuid: string) {
+    // 1. 삭제할 댓글 존재 여부 확인
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      CustomException.throw(
+        ErrorCode.COMMENT_NOT_FOUND,
+        '존재하지 않는 댓글입니다.',
+      );
+    }
+
+    // 2. 본인 댓글인지 권한 검사
+    if (comment.userUuid !== userUuid) {
+      CustomException.throw(
+        ErrorCode.COMMENT_ACCESS_DENIED,
+        '댓글 삭제 권한이 없습니다.',
+      );
+    }
+
+    // 3. 댓글 삭제
+    await this.commentRepository.delete(commentId);
+
+    // 4. 최종 반환
+    return {
+      message: '댓글이 성공적으로 삭제되었습니다.',
     };
   }
 }

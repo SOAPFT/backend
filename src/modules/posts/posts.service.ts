@@ -14,6 +14,7 @@ import { ChallengeService } from '../challenges/challenge.service';
 import { User } from '@/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import { ulid } from 'ulid';
+import { Comment } from '@/entities/comment.entity';
 
 @Injectable()
 export class PostsService {

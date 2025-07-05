@@ -8,10 +8,10 @@ import { CommentsModule } from '../comments/comments.module';
 import { ChallengeModule } from '../challenges/challenge.module';
 import { User } from '@/entities/user.entity';
 import { UsersModule } from '../users/users.module';
-
+import { Comment } from '@/entities/comment.entity';
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, User]),
+    TypeOrmModule.forFeature([Post, User, Comment]),
     forwardRef(() => LikesModule),
     forwardRef(() => CommentsModule),
     forwardRef(() => ChallengeModule),

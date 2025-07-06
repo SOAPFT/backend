@@ -44,8 +44,8 @@ export class User {
   introduction: string;
 
   /** 사용자 연령 (챌린지 참여 조건 체크용) */
-  @Column({ name: 'age', type: 'int', nullable: true })
-  age: number;
+  @Column({ name: 'birth_date', type: 'date', nullable: true })
+  birthDate: Date;
 
   /** 사용자 성별 (챌린지 참여 조건 체크용) */
   @Column({

@@ -230,3 +230,50 @@ export function ApiGetUserPosts() {
     }),
   );
 }
+
+export function ApiGetOtherUserInfo() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '다른 사용자 정보 조회',
+      description:
+        '특정 사용자의 닉네임, 프로필 이미지, 소개글, 게시글 수, 친구 수를 조회합니다.',
+    }),
+    ApiParam({
+      name: 'userUuid',
+      description: '조회할 사용자 UUID',
+      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '사용자 정보 조회 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          userName: { type: 'string', example: '상냥한너구리' },
+          userImage: {
+            type: 'string',
+            example: 'https://example.com/profile.jpg',
+          },
+          userIntroduction: { type: 'string', example: '안녕하세요!' },
+          userUuid: { type: 'string', example: '01HZQK5J8X2M3N4P5Q6R7S8T9V' },
+          postCount: { type: 'number', example: 5 },
+          friendCount: { type: 'number', example: 10 },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: '사용자를 찾을 수 없습니다.',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'USER_001' },
+          message: {
+            type: 'string',
+            example: '해당 사용자를 찾을 수 없습니다.',
+          },
+        },
+      },
+    }),
+  );
+}

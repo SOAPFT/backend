@@ -419,3 +419,116 @@ export function ApiGetPostsByChallenge() {
     }),
   );
 }
+
+export function ApiGetMyCalendar() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '내 달력 조회',
+      description: '자신의 인증글 달력 데이터를 조회합니다.',
+    }),
+    ApiQuery({
+      name: 'year',
+      required: true,
+      type: Number,
+      example: 2025,
+      description: '조회할 연도',
+    }),
+    ApiQuery({
+      name: 'month',
+      required: true,
+      type: Number,
+      example: 7,
+      description: '조회할 월 (1~12)',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '달력 조회 성공',
+      schema: {
+        example: {
+          data: [
+            {
+              date: '2025-07-02',
+              posts: [
+                {
+                  postUuid: '01JZFP44NM9XPNFQRQF4CHE9A6',
+                  thumbnailUrl:
+                    'https://cdn.example.com/images/post1-thumb.jpg',
+                },
+              ],
+            },
+            {
+              date: '2025-07-04',
+              posts: [
+                {
+                  postUuid: '01JZFP44NM9XPNFQRQF4CHE9B7',
+                  thumbnailUrl:
+                    'https://cdn.example.com/images/post2-thumb.jpg',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    }),
+  );
+}
+
+export function ApiGetOtherCalendar() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '다른 사용자 달력 조회',
+      description: '특정 사용자의 인증글 달력 데이터를 조회합니다.',
+    }),
+    ApiParam({
+      name: 'userUuid',
+      required: true,
+      type: String,
+      example: '01HYXXXXXXX',
+      description: '조회할 사용자 UUID',
+    }),
+    ApiQuery({
+      name: 'year',
+      required: true,
+      type: Number,
+      example: 2025,
+      description: '조회할 연도',
+    }),
+    ApiQuery({
+      name: 'month',
+      required: true,
+      type: Number,
+      example: 7,
+      description: '조회할 월 (1~12)',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '달력 조회 성공',
+      schema: {
+        example: {
+          data: [
+            {
+              date: '2025-07-02',
+              posts: [
+                {
+                  postUuid: '01JZFP44NM9XPNFQRQF4CHE9A6',
+                  thumbnailUrl:
+                    'https://cdn.example.com/images/post1-thumb.jpg',
+                },
+              ],
+            },
+            {
+              date: '2025-07-04',
+              posts: [
+                {
+                  postUuid: '01JZFP44NM9XPNFQRQF4CHE9B7',
+                  thumbnailUrl:
+                    'https://cdn.example.com/images/post2-thumb.jpg',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    }),
+  );
+}

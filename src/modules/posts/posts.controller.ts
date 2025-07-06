@@ -21,6 +21,8 @@ import {
   ApiUpdatePost,
   ApiGetPostsByChallenge,
   ApiGetMyPosts,
+  ApiGetMyCalendar,
+  ApiGetOtherCalendar,
 } from './decorators/posts.swagger';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
@@ -66,6 +68,43 @@ export class PostsController {
       Number(page),
       Number(limit),
     );
+  }
+
+  /**
+   * 현재 로그인한 사용자의 게시글 캘린더 조회
+   * @param userUuid 사용자 UUID
+   * @param year
+   * @param month
+   * @returns
+   */
+  @Get('calendar')
+  @ApiGetMyCalendar()
+  async getMyCalendar(
+    @UserUuid() userUuid: string,
+    @Query('year') year: number,
+    @Query('month') month: number,
+  ) {
+    const data = await this.postsService.getUserCalendar(userUuid, year, month);
+    return { data };
+  }
+
+  /**
+   * 다른 사용자의 게시글 캘린더 조회
+   * @param userUuid
+   * @param year
+   * @param month
+   * @returns
+   */
+
+  @Get('calendar/:userUuid')
+  @ApiGetOtherCalendar()
+  async getOtherCalendar(
+    @Param('userUuid') userUuid: string,
+    @Query('year') year: number,
+    @Query('month') month: number,
+  ) {
+    const data = await this.postsService.getUserCalendar(userUuid, year, month);
+    return { data };
   }
 
   /**

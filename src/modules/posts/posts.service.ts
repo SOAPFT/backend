@@ -3,7 +3,7 @@ import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { Post } from '@/entities/post.entity';
 
 import { CustomException } from '@/utils/custom-exception';
@@ -258,5 +258,34 @@ export class PostsService {
       limit,
       posts: postsWithUserAndLike,
     };
+  }
+
+  async getUserCalendar(userUuid: string, year: number, month: number) {
+    const posts = await this.postRepository.find({
+      where: {
+        userUuid,
+        createdAt: Between(
+          new Date(`${year}-${month}-01`),
+          new Date(`${year}-${month}-31`),
+        ),
+      },
+      select: ['postUuid', 'imageUrl', 'createdAt'],
+    });
+
+    // 날짜별 그룹핑
+    const grouped = posts.reduce((acc, post) => {
+      const date = post.createdAt.toISOString().split('T')[0];
+      if (!acc[date]) acc[date] = [];
+      acc[date].push({
+        postUuid: post.postUuid,
+        imageUrl: post.imageUrl,
+      });
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([date, posts]) => ({
+      date,
+      posts,
+    }));
   }
 }

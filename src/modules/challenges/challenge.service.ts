@@ -567,7 +567,29 @@ export class ChallengeService {
         }
       }
 
-      // 4. 챌린지 업데이트
+      // 4. 성공자에게 보상 코인 지급
+      const totalParticipants = challenge.participantUuid.length;
+      const totalCoins = totalParticipants * challenge.coinAmount;
+      const numSuccess = successParticipants.length;
+
+      if (numSuccess > 0) {
+        const rewardPerSuccess = Math.floor(totalCoins / numSuccess);
+
+        for (const userUuid of successParticipants) {
+          const user = await this.userRepository.findOne({
+            where: {
+              userUuid,
+            },
+          });
+
+          if (user) {
+            user.coins += rewardPerSuccess;
+            await this.userRepository.save(user);
+          }
+        }
+      }
+
+      // 5. 챌린지 업데이트
       challenge.successParticipantsUuid = successParticipants;
       challenge.isFinished = true;
 

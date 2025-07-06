@@ -38,7 +38,7 @@ export class UsersService {
       socialProvider: user.socialProvider,
       socialId: user.socialId,
       pushToken: user.pushToken,
-      coins: 15,
+      coins: 20,
       status: UserStatusType.INCOMPLETE,
     });
     return this.userRepository.save(newUser);
@@ -125,7 +125,12 @@ export class UsersService {
     const { newNickname, newIntroduction, newProfileImg } = dto;
 
     const user = await this.userRepository.findOneBy({ userUuid });
-    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    if (!user) {
+      CustomException.throw(
+        ErrorCode.USER_NOT_FOUND,
+        '해당 사용자를 찾을 수 없습니다.',
+      );
+    }
 
     if (newNickname !== undefined) {
       user.nickname = newNickname;
@@ -163,7 +168,10 @@ export class UsersService {
     const user = await this.userRepository.findOneBy({ userUuid });
 
     if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      CustomException.throw(
+        ErrorCode.USER_NOT_FOUND,
+        '해당 사용자를 찾을 수 없습니다.',
+      );
     }
 
     user.status = UserStatusType.DELETE;
@@ -175,25 +183,34 @@ export class UsersService {
     return { message: '회원 탈퇴 성공!' };
   }
 
+  /**
+   * 사용자 정보 조회
+   * @param userUuid 사용자 UUID
+   * @returns 사용자 정보 (닉네임, 프로필 이미지, 소개글, UUID)
+   */
   async getUserInfo(userUuid: string) {
     const user = await this.userRepository.findOne({
       where: { userUuid },
     });
 
     if (!user) {
-      return {
-        userName: null,
-        userImage: null,
-        userIntroduction: null,
-        userUuid: userUuid,
-      };
+      CustomException.throw(
+        ErrorCode.USER_NOT_FOUND,
+        '해당 사용자를 찾을 수 없습니다.',
+      );
     }
+
+    // 2. 해당 사용자가 작성한 게시글 개수 조회
+    const postCount = await this.postRepository.count({
+      where: { userUuid },
+    });
 
     return {
       userName: user.nickname,
       userImage: user.profileImage,
       userIntroduction: user.introduction,
       userUuid: user.userUuid,
+      postCount,
     };
   }
 }

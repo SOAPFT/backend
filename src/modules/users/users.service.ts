@@ -95,7 +95,7 @@ export class UsersService {
 
     user.nickname = dto.nickname;
     user.gender = dto.gender;
-    user.age = dto.age;
+    user.birthDate = dto.birthDate;
     user.status = UserStatusType.ACTIVE;
 
     await this.userRepository.save(user);

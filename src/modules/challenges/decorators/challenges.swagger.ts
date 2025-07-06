@@ -1,21 +1,21 @@
-import { applyDecorators } from '@nestjs/common';
 import {
-  ApiOperation,
-  ApiResponse,
-  ApiBody,
   ApiBearerAuth,
   ApiQuery,
   ApiParam,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
 } from '@nestjs/swagger';
 import {
   createErrorResponse,
   CommonAuthResponses,
   CommonErrorResponses,
 } from '../../../decorators/swagger.decorator';
-import { CreateChallengeDto } from '../dto/create-challenge.dto';
 import { ChallengeResponseDto } from '../dto/challenge-response.dto';
 import { MonthlyChallengeStatsResponseDto } from '../dto/monthly-challenge-stats.response.dto';
 import { GenderType, ChallengeType } from '@/types/challenge.enum';
+import { applyDecorators } from '@nestjs/common';
+import { CreateChallengeDto } from '../dto/create-challenge.dto';
 
 export function ApiCreateChallenge() {
   return applyDecorators(
@@ -32,7 +32,10 @@ export function ApiCreateChallenge() {
       schema: {
         type: 'object',
         properties: {
-          challengeId: { type: 'number', example: 1 },
+          challengeUuid: {
+            type: 'string',
+            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+          },
           message: {
             type: 'string',
             example: '챌린지가 성공적으로 생성되었습니다.',
@@ -41,8 +44,55 @@ export function ApiCreateChallenge() {
       },
     }),
     ApiResponse({
+      status: 400,
+      description:
+        '잘못된 요청 (입력값 오류, 코인 부족, 날짜 오류, 연령 조건 불일치 등)',
+      content: {
+        'application/json': {
+          examples: {
+            InvalidInput: {
+              summary: '입력값이 올바르지 않을 때',
+              value: {
+                errorCode: 'SYS_004',
+                message: '입력값이 올바르지 않습니다.',
+              },
+            },
+            CoinInsufficient: {
+              summary: '코인이 부족할 때',
+              value: {
+                errorCode: 'COIN_001',
+                message: '챌린지를 생성할 코인이 부족합니다.',
+              },
+            },
+            InvalidDates: {
+              summary: '시작일과 종료일이 올바르지 않을 때',
+              value: {
+                errorCode: 'CHALLENGE_009',
+                message: '시작일과 종료일이 올바르지 않습니다.',
+              },
+            },
+            AgeNotMet: {
+              summary: '연령 조건에 맞지 않을 때',
+              value: {
+                errorCode: 'CHALLENGE_011',
+                message: '연령 조건에 맞지 않습니다.',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
       status: 500,
-      description: '서버 에러',
+      description: '서버 오류',
+      content: {
+        'application/json': {
+          example: {
+            errorCode: 'SYS_001',
+            message: '서버 오류가 발생했습니다.',
+          },
+        },
+      },
     }),
   );
 }

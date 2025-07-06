@@ -19,8 +19,8 @@ export class OnBoardingDto {
 
   @IsInt()
   @ApiProperty({
-    description: '나이',
-    example: '27',
+    description: '생년월일 (YYYY-MM-DD)',
+    example: '1995-06-13',
   })
-  age: number;
+  birthDate: Date;
 }

@@ -19,6 +19,16 @@ import { MoreThan, LessThan, MoreThanOrEqual, Between, ILike } from 'typeorm';
 import { subDays } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
+/**
+ * 나이 계산 함수
+ * @param birthDate
+ * @returns
+ */
+function calculateAge(birthDate: Date): number {
+  const today = new Date();
+  return today.getFullYear() - birthDate.getFullYear() + 1;
+}
+
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -71,6 +81,16 @@ export class ChallengeService {
       CustomException.throw(
         ErrorCode.INVALID_CHALLENGE_DATES,
         '종료일은 현재 시각 이후여야 합니다.',
+      );
+    }
+
+    const userAge = calculateAge(user.birthDate);
+    const { start_age, end_age } = createChallengeDto;
+
+    if (!(start_age <= userAge && userAge <= end_age)) {
+      CustomException.throw(
+        ErrorCode.AGE_RESTRICTION_NOT_MET,
+        `챌린지 생성 연령 조건에 맞지 않습니다. (${start_age}세 ~ ${end_age}세)`,
       );
     }
 
@@ -325,7 +345,9 @@ export class ChallengeService {
       );
     }
 
-    if (!(challenge.startAge <= user.age && user.age <= challenge.endAge)) {
+    const userAge = calculateAge(user.birthDate);
+
+    if (!(challenge.startAge <= userAge && userAge <= challenge.endAge)) {
       CustomException.throw(
         ErrorCode.AGE_RESTRICTION_NOT_MET,
         '참여 가능한 연령 조건을 만족하지 않습니다.',

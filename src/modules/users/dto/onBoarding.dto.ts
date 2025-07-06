@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsInt } from 'class-validator';
+import { IsString } from 'class-validator';
 import { GenderType } from '@/types/challenge.enum';
 
 export class OnBoardingDto {
@@ -17,7 +17,7 @@ export class OnBoardingDto {
   })
   gender: GenderType;
 
-  @IsInt()
+  @IsString()
   @ApiProperty({
     description: '생년월일 (YYYY-MM-DD)',
     example: '1995-06-13',

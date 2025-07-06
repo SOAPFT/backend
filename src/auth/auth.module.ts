@@ -11,11 +11,12 @@ import { JwtStrategy } from './strategy/jwt.strategy';
 import { ConfigModule } from '@nestjs/config';
 import { Post } from '@/entities/post.entity';
 import { UsersModule } from '@/modules/users/users.module';
+import { Friendship } from '@/entities/friendship.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    TypeOrmModule.forFeature([Auth, User, Post]),
+    TypeOrmModule.forFeature([Auth, User, Post, Friendship]),
     PassportModule,
     JwtModule.register({}),
     forwardRef(() => UsersModule),

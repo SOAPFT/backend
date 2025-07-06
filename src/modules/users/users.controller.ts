@@ -1,6 +1,14 @@
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
-import { Body, Controller, Delete, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Post,
+  UseGuards,
+  Param,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
@@ -8,6 +16,7 @@ import {
   ApiUpdateProfile,
   ApiLogout,
   ApiOnboarding,
+  ApiGetOtherUserInfo,
 } from './decorators/users.swagger';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { OnBoardingDto } from './dto/onBoarding.dto';
@@ -54,5 +63,16 @@ export class UsersController {
   @ApiGetUserInfo()
   async getUserInfo(@UserUuid() UserUuid: string) {
     return this.usersService.getUserInfo(UserUuid);
+  }
+
+  /**
+   * 다른 사용자 정보 조회
+   * @param userUuid 조회할 사용자 UUID
+   * @returns 사용자 정보 (닉네임, 프로필 이미지, 소개글, UUID, 게시글 수, 친구 수)
+   */
+  @Get('info/:userUuid')
+  @ApiGetOtherUserInfo()
+  async getOtherUserInfo(@Param('userUuid') userUuid: string) {
+    return this.usersService.getOtherUserInfo(userUuid);
   }
 }

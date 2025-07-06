@@ -24,9 +24,10 @@ import { Cron, CronExpression } from '@nestjs/schedule';
  * @param birthDate
  * @returns
  */
-function calculateAge(birthDate: Date): number {
+function calculateAge(birthDate: Date | string): number {
+  const dateObj = birthDate instanceof Date ? birthDate : new Date(birthDate);
   const today = new Date();
-  return today.getFullYear() - birthDate.getFullYear() + 1;
+  return today.getFullYear() - dateObj.getFullYear() + 1;
 }
 
 @Injectable()

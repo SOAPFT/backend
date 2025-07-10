@@ -233,7 +233,7 @@ export class UsersService {
    * @param userUuid 조회할 사용자 UUID
    * @returns 사용자 정보 (닉네임, 프로필 이미지, 소개글, UUID, 게시글 수, 친구 수)
    */
-  async getOtherUserInfo(userUuid: string) {
+  async getOtherUserInfo(viewerUuid: string, userUuid: string) {
     const user = await this.userRepository.findOne({
       where: { userUuid },
     });
@@ -257,6 +257,28 @@ export class UsersService {
         { addresseeUuid: userUuid, status: FriendshipStatus.ACCEPTED },
       ],
     });
+    // 친구 상태 조회 (viewerUuid <-> userUuid 관계)
+    const friendRelation = await this.friendshipRepository.findOne({
+      where: [
+        { requesterUuid: viewerUuid, addresseeUuid: userUuid },
+        { requesterUuid: userUuid, addresseeUuid: viewerUuid },
+      ],
+    });
+
+    let friendStatus: string;
+
+    if (!friendRelation) {
+      friendStatus = 'no_relation';
+    } else if (friendRelation.status === FriendshipStatus.PENDING) {
+      friendStatus =
+        friendRelation.requesterUuid === viewerUuid
+          ? 'request_sent' // 내가 보냄
+          : 'request_received'; // 상대가 보냄
+    } else if (friendRelation.status === FriendshipStatus.ACCEPTED) {
+      friendStatus = 'friends';
+    } else if (friendRelation.status === FriendshipStatus.BLOCKED) {
+      friendStatus = 'blocked';
+    }
 
     return {
       userName: user.nickname,
@@ -265,6 +287,7 @@ export class UsersService {
       userUuid: user.userUuid,
       postCount,
       friendCount,
+      friendStatus,
     };
   }
 }

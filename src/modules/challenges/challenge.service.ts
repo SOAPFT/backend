@@ -193,7 +193,17 @@ export class ChallengeService {
 
     const isParticipated = challenge.participantUuid.includes(userUuid);
 
-    return { ...challenge, isParticipated };
+    // 참여자 목록 조회
+    const participants = await this.userRepository.find({
+      where: challenge.participantUuid.map((uuid) => ({ userUuid: uuid })),
+      select: ['userUuid', 'nickname', 'profileImage'],
+    });
+
+    return {
+      ...challenge,
+      isParticipated,
+      participants, // [{ userUuid, nickname, profileImage }, ...]
+    };
   }
 
   /**
@@ -225,7 +235,7 @@ export class ChallengeService {
   async countUserCompletedChallenges(userUuid: string) {
     const count = await this.challengeRepository
       .createQueryBuilder('challenge')
-      .where(':userUuid =뭐 ANY(challenge.successParticipantsUuid)', {
+      .where(':userUuid = ANY(challenge.successParticipantsUuid)', {
         userUuid,
       })
       .getCount();
@@ -537,14 +547,41 @@ export class ChallengeService {
   }
 
   /**
+   * 시작일이 지난 챌린지 자동으로 isStart = true 처리
    * 종료일이 지난 챌린지를 자동으로 종료 처리
    * 100% 달성한 참여자를 successParticipantsUuid에 추가
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async closeExpiredChallenges() {
+  async updateChallengeStatuses() {
     const now = new Date();
 
-    // 1. 종료일이 지났고, 아직 종료 처리되지 않은 챌린지 조회
+    /**
+     * 1. 오늘 시작해야 하는 챌린지 시작 처리
+     */
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+    const startingChallenges = await this.challengeRepository.find({
+      where: {
+        startDate: Between(startOfDay, endOfDay),
+        isStarted: false,
+      },
+    });
+
+    for (const challenge of startingChallenges) {
+      challenge.isStarted = true;
+      await this.challengeRepository.save(challenge);
+    }
+
+    console.log(
+      `[스케줄러] ${startingChallenges.length}개의 챌린지가 시작 처리되었습니다.`,
+    );
+
+    /**
+     * 2. 종료일이 지났고, 아직 종료 처리되지 않은 챌린지 종료 처리
+     */
     const expiredChallenges = await this.challengeRepository.find({
       where: {
         endDate: LessThan(now),
@@ -555,20 +592,20 @@ export class ChallengeService {
     for (const challenge of expiredChallenges) {
       const successParticipants: string[] = [];
 
-      // 2. 참여자별로 진행률 조회
+      // 참여자별 진행률 조회
       for (const userUuid of challenge.participantUuid) {
         const { totalAchievementRate } = await this.getUserChallengeProgress(
           userUuid,
           challenge.challengeUuid,
         );
 
-        // 3. 달성률 100%인 경우 successParticipants에 추가
+        // 달성률 100%인 경우 successParticipants에 추가
         if (totalAchievementRate === 100) {
           successParticipants.push(userUuid);
         }
       }
 
-      // 4. 성공자에게 보상 코인 지급
+      // 성공자에게 보상 코인 지급
       const totalParticipants = challenge.participantUuid.length;
       const totalCoins = totalParticipants * challenge.coinAmount;
       const numSuccess = successParticipants.length;
@@ -590,7 +627,7 @@ export class ChallengeService {
         }
       }
 
-      // 5. 챌린지 업데이트
+      // 챌린지 업데이트
       challenge.successParticipantsUuid = successParticipants;
       challenge.isFinished = true;
 

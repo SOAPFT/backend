@@ -68,11 +68,15 @@ export class UsersController {
   /**
    * 다른 사용자 정보 조회
    * @param userUuid 조회할 사용자 UUID
-   * @returns 사용자 정보 (닉네임, 프로필 이미지, 소개글, UUID, 게시글 수, 친구 수)
+   * @param viewerUuid 현재 로그인한 사용자 UUID
+   * @returns 사용자 정보 (닉네임, 프로필 이미지, 소개글, UUID, 게시글 수, 친구 수, 친구 상태)
    */
   @Get('info/:userUuid')
   @ApiGetOtherUserInfo()
-  async getOtherUserInfo(@Param('userUuid') userUuid: string) {
-    return this.usersService.getOtherUserInfo(userUuid);
+  async getOtherUserInfo(
+    @Param('userUuid') userUuid: string,
+    @UserUuid() viewerUuid: string, // 현재 로그인한 사용자 UUID 데코레이터
+  ) {
+    return this.usersService.getOtherUserInfo(viewerUuid, userUuid);
   }
 }

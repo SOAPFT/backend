@@ -193,7 +193,17 @@ export class ChallengeService {
 
     const isParticipated = challenge.participantUuid.includes(userUuid);
 
-    return { ...challenge, isParticipated };
+    // 참여자 목록 조회
+    const participants = await this.userRepository.find({
+      where: challenge.participantUuid.map((uuid) => ({ userUuid: uuid })),
+      select: ['userUuid', 'nickname', 'profileImage'],
+    });
+
+    return {
+      ...challenge,
+      isParticipated,
+      participants, // [{ userUuid, nickname, profileImage }, ...]
+    };
   }
 
   /**

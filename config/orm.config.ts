@@ -1,5 +1,4 @@
 import { ConfigService } from '@nestjs/config';
-import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import type { DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
@@ -8,9 +7,7 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 config({ path: `env/.${nodeEnv}.env` });
 
 // NestJS에서 사용되는 설정
-export const typeOrmConfig = (
-  configService: ConfigService,
-): TypeOrmModuleOptions => {
+export const typeOrmConfig = (configService: ConfigService): any => {
   return {
     type: 'postgres',
     host: configService.get('DB_HOST') || 'localhost',
@@ -18,10 +15,10 @@ export const typeOrmConfig = (
     username: configService.get('DB_USERNAME') || 'postgres',
     password: configService.get('DB_PASSWORD') || 'postgres',
     database: configService.get('DB_DATABASE') || 'soapft',
-    entities: [__dirname + '/../**/*.entity.{js,ts}'],
+    entities: ['src/**/*.entity.{js,ts}'],
     synchronize: configService.get('NODE_ENV') !== 'production',
     logging: configService.get('NODE_ENV') !== 'production',
-    migrations: [__dirname + '/../database/migrations/**/*.{js,ts}'],
+    migrations: ['database/migrations/**/*.{js,ts}'],
     migrationsTableName: 'migrations',
     ssl:
       configService.get('NODE_ENV') === 'production'
@@ -37,14 +34,16 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_DATABASE || 'soapft',
-  entities: [__dirname + '/../**/*.entity.{js,ts}'],
-  migrations: [__dirname + '/../database/migrations/**/*.{js,ts}'],
+  entities: ['src/**/*.entity.{js,ts}'],
+  migrations: ['database/migrations/**/*.{js,ts}'],
   migrationsTableName: 'migrations',
   ssl:
     process.env.NODE_ENV === 'production'
       ? { rejectUnauthorized: false }
       : false,
-};
+  seeds: ['database/seeds/**/*.{js,ts}'],
+  factories: ['database/factories/**/*.{js,ts}'],
+} as DataSourceOptions & { seeds?: string[]; factories?: string[] };
 
 // TypeORM CLI를 위한 DataSource 인스턴스
 export const AppDataSource = new DataSource(dataSourceOptions);

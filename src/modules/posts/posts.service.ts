@@ -212,6 +212,16 @@ export class PostsService {
 
     const postUuids = posts.map((post) => post.postUuid);
 
+    if (postUuids.length === 0) {
+      return {
+        message: '챌린지 게시글 목록 조회 성공',
+        total,
+        page,
+        limit,
+        posts: [],
+      };
+    }
+
     const likeCounts =
       await this.likesService.getLikeCountsByPostIds(postUuids);
 

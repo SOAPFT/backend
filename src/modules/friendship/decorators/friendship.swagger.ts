@@ -4,6 +4,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CreateFriendRequestDto } from '../dto/create-friendrequest.dto';
 import {
@@ -256,5 +257,34 @@ export function ApiGetSentRequests() {
     }),
     ApiResponse(CommonAuthResponses.Unauthorized),
     ApiResponse(CommonErrorResponses.InternalServerError),
+  );
+}
+
+export function ApiSearchFriends() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '친구 검색',
+      description: '닉네임으로 내 친구 목록 중에서 검색합니다.',
+    }),
+    ApiQuery({
+      name: 'keyword',
+      required: true,
+      type: String,
+      example: '상냥',
+      description: '검색할 닉네임 키워드',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '검색된 친구 목록',
+      schema: {
+        example: [
+          {
+            userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
+            nickname: '민지짱',
+            profileImage: 'https://cdn.example.com/images/user1.jpg',
+          },
+        ],
+      },
+    }),
   );
 }

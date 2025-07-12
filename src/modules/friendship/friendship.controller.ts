@@ -4,7 +4,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UseGuards } from '@nestjs/common';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
-import { Body, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { CreateFriendRequestDto } from './dto/create-friendrequest.dto';
 import {
   ApiAcceptFriendRequest,
@@ -14,6 +14,7 @@ import {
   ApiRejectFriendRequest,
   ApiRemoveFriend,
   ApiSendFriendRequest,
+  ApiSearchFriends,
 } from './decorators/friendship.swagger';
 
 @ApiTags('frendship')
@@ -121,5 +122,17 @@ export class FriendshipController {
   @ApiGetSentRequests()
   async getSentRequests(@UserUuid() userUuid: string) {
     return this.friendshipService.getSentRequests(userUuid);
+  }
+
+  /**
+   * 친구 검색 함수
+   */
+  @Get('friends/search')
+  @ApiSearchFriends()
+  async searchFriends(
+    @UserUuid() userUuid: string, // 현재 로그인한 사용자 UUID
+    @Query('keyword') keyword: string, // 검색할 닉네임 키워드
+  ) {
+    return this.friendshipService.searchMyFriends(userUuid, keyword);
   }
 }

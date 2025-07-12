@@ -266,18 +266,23 @@ export class UsersService {
     });
 
     let friendStatus: string;
+    let friendId: number | null = null;
 
     if (!friendRelation) {
       friendStatus = 'no_relation';
-    } else if (friendRelation.status === FriendshipStatus.PENDING) {
-      friendStatus =
-        friendRelation.requesterUuid === viewerUuid
-          ? 'request_sent' // 내가 보냄
-          : 'request_received'; // 상대가 보냄
-    } else if (friendRelation.status === FriendshipStatus.ACCEPTED) {
-      friendStatus = 'friends';
-    } else if (friendRelation.status === FriendshipStatus.BLOCKED) {
-      friendStatus = 'blocked';
+    } else {
+      friendId = friendRelation.id;
+
+      if (friendRelation.status === FriendshipStatus.PENDING) {
+        friendStatus =
+          friendRelation.requesterUuid === viewerUuid
+            ? 'request_sent'
+            : 'request_received';
+      } else if (friendRelation.status === FriendshipStatus.ACCEPTED) {
+        friendStatus = 'friends';
+      } else if (friendRelation.status === FriendshipStatus.BLOCKED) {
+        friendStatus = 'blocked';
+      }
     }
 
     return {
@@ -288,6 +293,7 @@ export class UsersService {
       postCount,
       friendCount,
       friendStatus,
+      friendId,
     };
   }
 }

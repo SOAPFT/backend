@@ -1,6 +1,6 @@
-import { SocialProvider } from '@/types/social-provider.enum';
-import { UserStatusType } from '@/types/user-status.enum';
-import { GenderType } from '@/types/challenge.enum';
+import { SocialProvider } from '../types/social-provider.enum';
+import { UserStatusType } from '../types/user-status.enum';
+import { GenderType } from '../types/challenge.enum';
 import {
   Column,
   CreateDateColumn,

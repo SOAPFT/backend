@@ -3,8 +3,9 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import { ChallengeType, GenderType } from '@/types/challenge.enum';
+import { ChallengeType, GenderType } from '../types/challenge.enum';
 
 @Entity('challenge')
 export class Challenge {
@@ -102,6 +103,6 @@ export class Challenge {
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @CreateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

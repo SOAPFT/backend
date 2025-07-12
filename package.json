@@ -42,6 +42,8 @@
     "db:refresh:prod": "npm run db:drop:prod && npm run db:create:prod && npm run db:sync:prod && npm run db:seed:prod"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.844.0",
+    "@aws-sdk/lib-storage": "^3.844.0",
     "@nestjs/common": "^10.4.15",
     "@nestjs/config": "^4.0.1",
     "@nestjs/core": "^10.4.15",
@@ -55,7 +57,6 @@
     "@nestjs/websockets": "^10.4.19",
     "@types/passport-kakao": "^1.0.3",
     "@types/passport-naver": "^1.0.4",
-    "aws-sdk": "^2.1692.0",
     "axios": "^1.8.3",
     "bcryptjs": "^3.0.2",
     "class-transformer": "^0.5.1",

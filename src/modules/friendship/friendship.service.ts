@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Friendship } from '@/entities/friendship.entity';
-import { Repository, In, ILike } from 'typeorm';
+import { Repository, In, ILike, Not } from 'typeorm';
 import { CreateFriendRequestDto } from './dto/create-friendrequest.dto';
 import { ErrorCode } from '@/types/error-code.enum';
 import { CustomException } from '@/utils/custom-exception';
@@ -247,32 +247,38 @@ export class FriendshipService {
     return { sentRequests };
   }
 
-  async searchMyFriends(userUuid: string, keyword: string) {
-    // 1. 친구 관계 가져오기 (나와 친구 상태인 유저들)
-    const friends = await this.friendshipRepository.find({
+  async searchUsersWithFriendStatus(userUuid: string, keyword: string) {
+    // 1. 닉네임으로 전체 사용자 검색 (자기 자신은 제외)
+    const users = await this.userRepository.find({
+      where: [
+        {
+          nickname: ILike(`%${keyword}%`),
+          userUuid: Not(userUuid),
+        },
+      ],
+      select: ['userUuid', 'nickname', 'profileImage'],
+    });
+
+    // 2. 현재 유저의 친구 목록 가져오기
+    const friendships = await this.friendshipRepository.find({
       where: [
         { requesterUuid: userUuid, status: FriendshipStatus.ACCEPTED },
         { addresseeUuid: userUuid, status: FriendshipStatus.ACCEPTED },
       ],
     });
 
-    const friendUuids = friends.map((f) =>
+    const friendUuids = friendships.map((f) =>
       f.requesterUuid === userUuid ? f.addresseeUuid : f.requesterUuid,
     );
 
-    if (friendUuids.length === 0) {
-      return [];
-    }
+    // 3. 결과에 친구 여부 포함시키기
+    const result = users.map((u) => ({
+      userUuid: u.userUuid,
+      nickname: u.nickname,
+      profileImage: u.profileImage,
+      isFriend: friendUuids.includes(u.userUuid),
+    }));
 
-    // 2. 친구 목록 중 닉네임 검색
-    const users = await this.userRepository.find({
-      where: friendUuids.map((uuid) => ({
-        userUuid: uuid,
-        nickname: ILike(`%${keyword}%`),
-      })),
-      select: ['userUuid', 'nickname', 'profileImage'],
-    });
-
-    return users;
+    return result;
   }
 }

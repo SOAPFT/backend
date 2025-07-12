@@ -14,7 +14,7 @@ import {
   ApiRejectFriendRequest,
   ApiRemoveFriend,
   ApiSendFriendRequest,
-  ApiSearchFriends,
+  ApiSearchUsersWithFriendStatus,
 } from './decorators/friendship.swagger';
 
 @ApiTags('frendship')
@@ -128,11 +128,14 @@ export class FriendshipController {
    * 친구 검색 함수
    */
   @Get('friends/search')
-  @ApiSearchFriends()
+  @ApiSearchUsersWithFriendStatus()
   async searchFriends(
     @UserUuid() userUuid: string, // 현재 로그인한 사용자 UUID
     @Query('keyword') keyword: string, // 검색할 닉네임 키워드
   ) {
-    return this.friendshipService.searchMyFriends(userUuid, keyword);
+    return this.friendshipService.searchUsersWithFriendStatus(
+      userUuid,
+      keyword,
+    );
   }
 }

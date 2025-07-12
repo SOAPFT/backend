@@ -260,30 +260,41 @@ export function ApiGetSentRequests() {
   );
 }
 
-export function ApiSearchFriends() {
+export function ApiSearchUsersWithFriendStatus() {
   return applyDecorators(
     ApiOperation({
-      summary: '친구 검색',
-      description: '닉네임으로 내 친구 목록 중에서 검색합니다.',
+      summary: '사용자 닉네임 검색 (친구 여부 포함)',
+      description:
+        '닉네임에 특정 키워드가 포함된 전체 사용자 목록을 검색하고, 나와 친구인지 여부도 함께 반환합니다.',
     }),
     ApiQuery({
       name: 'keyword',
       required: true,
       type: String,
-      example: '상냥',
+      example: '연희',
       description: '검색할 닉네임 키워드',
     }),
     ApiResponse({
       status: 200,
-      description: '검색된 친구 목록',
+      description: '사용자 검색 성공',
       schema: {
-        example: [
-          {
-            userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
-            nickname: '민지짱',
-            profileImage: 'https://cdn.example.com/images/user1.jpg',
-          },
-        ],
+        example: {
+          message: '검색 성공',
+          data: [
+            {
+              userUuid: '01JYXYZABC123',
+              nickname: '연희',
+              profileImage: 'https://cdn.example.com/profile.jpg',
+              isFriend: true,
+            },
+            {
+              userUuid: '01JYZXCBB234',
+              nickname: '다정',
+              profileImage: null,
+              isFriend: false,
+            },
+          ],
+        },
       },
     }),
   );

@@ -19,6 +19,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { FriendshipModule } from './modules/friendship/friendship.module';
+import { BoModule } from './modules/bo/bo.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -44,6 +45,7 @@ import { FriendshipModule } from './modules/friendship/friendship.module';
     ChatModule,
     NotificationsModule,
     FriendshipModule,
+    BoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -231,6 +231,10 @@ export function ApiGetPostDetail() {
               nickname: '헬스왕',
               profileImage: 'https://example.com/profile.jpg',
             },
+            likeCount: 0,
+            isLiked: false,
+            suspicionCount: 1,
+            isSuspicious: true,
           },
         },
       },
@@ -529,6 +533,36 @@ export function ApiGetOtherCalendar() {
           ],
         },
       },
+    }),
+  );
+}
+
+export function ApiReportSuspicion() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '게시글 의심 등록',
+      description:
+        '게시글이 챌린지와 무관하거나 부적절할 경우 신고할 수 있습니다.',
+    }),
+    ApiParam({
+      name: 'postUuid',
+      required: true,
+      type: String,
+      example: '01JZPOSTUUIDEXAMPLE123',
+      description: '의심하려는 게시글 UUID',
+    }),
+    ApiResponse({
+      status: 201,
+      description: '의심 등록 성공',
+      schema: {
+        example: {
+          message: '의심 등록 완료',
+        },
+      },
+    }),
+    ApiResponse({
+      status: 400,
+      description: '이미 의심 등록된 게시글입니다.',
     }),
   );
 }

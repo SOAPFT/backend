@@ -6,6 +6,21 @@ import { config } from 'dotenv';
 const nodeEnv = process.env.NODE_ENV || 'development';
 config({ path: `env/.${nodeEnv}.env` });
 
+// 환경별 경로 설정
+const isProd = process.env.NODE_ENV === 'production';
+const entityPath = isProd
+  ? 'dist/src/**/*.entity.js'
+  : 'src/**/*.entity.{js,ts}';
+const migrationPath = isProd
+  ? 'dist/database/migrations/**/*.js'
+  : 'database/migrations/**/*.{js,ts}';
+const seedPath = isProd
+  ? 'dist/database/seeds/**/*.js'
+  : 'database/seeds/**/*.{js,ts}';
+const factoryPath = isProd
+  ? 'dist/database/factories/**/*.js'
+  : 'database/factories/**/*.{js,ts}';
+
 // NestJS에서 사용되는 설정
 export const typeOrmConfig = (configService: ConfigService): any => {
   return {
@@ -15,10 +30,10 @@ export const typeOrmConfig = (configService: ConfigService): any => {
     username: configService.get('DB_USERNAME') || 'postgres',
     password: configService.get('DB_PASSWORD') || 'postgres',
     database: configService.get('DB_DATABASE') || 'soapft',
-    entities: ['src/**/*.entity.{js,ts}'],
+    entities: [entityPath],
     synchronize: configService.get('NODE_ENV') !== 'production',
     logging: configService.get('NODE_ENV') !== 'production',
-    migrations: ['database/migrations/**/*.{js,ts}'],
+    migrations: [migrationPath],
     migrationsTableName: 'migrations',
     ssl:
       configService.get('NODE_ENV') === 'production'
@@ -34,15 +49,15 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_DATABASE || 'soapft',
-  entities: ['src/**/*.entity.{js,ts}'],
-  migrations: ['database/migrations/**/*.{js,ts}'],
+  entities: [entityPath],
+  migrations: [migrationPath],
   migrationsTableName: 'migrations',
   ssl:
     process.env.NODE_ENV === 'production'
       ? { rejectUnauthorized: false }
       : false,
-  seeds: ['database/seeds/**/*.{js,ts}'],
-  factories: ['database/factories/**/*.{js,ts}'],
+  seeds: [seedPath],
+  factories: [factoryPath],
 } as DataSourceOptions & { seeds?: string[]; factories?: string[] };
 
 // TypeORM CLI를 위한 DataSource 인스턴스

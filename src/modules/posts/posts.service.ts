@@ -15,6 +15,8 @@ import { User } from '@/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import { ulid } from 'ulid';
 import { Comment } from '@/entities/comment.entity';
+import { Suspicion } from '@/entities/suspicion.entity';
+import { Like } from '@/entities/like.entity';
 
 @Injectable()
 export class PostsService {
@@ -31,6 +33,10 @@ export class PostsService {
     private userRepository: Repository<User>,
     @InjectRepository(Comment)
     private commentRepository: Repository<Comment>,
+    @InjectRepository(Suspicion)
+    private suspicionRepository: Repository<Suspicion>,
+    @InjectRepository(Like)
+    private likeRepository: Repository<Like>,
     private userService: UsersService,
   ) {}
 
@@ -144,6 +150,25 @@ export class PostsService {
       select: ['userUuid', 'nickname', 'profileImage'],
     });
 
+    // 좋아요 수
+    const likeCount = await this.likeRepository.count({
+      where: { postUuid },
+    });
+
+    // 내가 좋아요 했는지 여부
+    const liked = await this.likeRepository.findOne({
+      where: { postUuid, userUuid },
+    });
+
+    // 의심 수
+    const suspicionCount = await this.suspicionRepository.count({
+      where: { postUuid },
+    });
+    // 내가 의심했는지 여부
+    const suspicious = await this.suspicionRepository.findOne({
+      where: { postUuid, userUuid },
+    });
+
     return {
       message: '게시글 상세 조회 성공',
       post: {
@@ -166,6 +191,10 @@ export class PostsService {
               profileImage: user.profileImage,
             }
           : null,
+        likeCount,
+        isLiked: !!liked,
+        suspicionCount,
+        isSuspicious: !!suspicious,
       },
     };
   }
@@ -211,6 +240,16 @@ export class PostsService {
     });
 
     const postUuids = posts.map((post) => post.postUuid);
+
+    if (postUuids.length === 0) {
+      return {
+        message: '챌린지 게시글 목록 조회 성공',
+        total,
+        page,
+        limit,
+        posts: [],
+      };
+    }
 
     const likeCounts =
       await this.likesService.getLikeCountsByPostIds(postUuids);
@@ -287,5 +326,23 @@ export class PostsService {
       date,
       posts,
     }));
+  }
+
+  async reportSuspiciousPost(userUuid: string, postUuid: string) {
+    const existing = await this.suspicionRepository.findOne({
+      where: { userUuid, postUuid },
+    });
+
+    if (existing) {
+      CustomException.throw(
+        ErrorCode.ALREADY_REPORTED,
+        '이미 의심한 게시글입니다.',
+      );
+    }
+
+    const report = this.suspicionRepository.create({ userUuid, postUuid });
+    await this.suspicionRepository.save(report);
+
+    return { message: '의심하기 완료' };
   }
 }

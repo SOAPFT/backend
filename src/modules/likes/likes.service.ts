@@ -122,6 +122,11 @@ export class LikesService {
   async getLikeCountsByPostIds(
     postUuids: string[],
   ): Promise<Map<string, number>> {
+    const likeCountMap = new Map<string, number>();
+
+    if (postUuids.length === 0) {
+      return likeCountMap; // 빈 배열이면 쿼리 안 날리고 바로 리턴
+    }
     const likes = await this.likeRepository
       .createQueryBuilder('like')
       .select('like.postUuid', 'postUuid')
@@ -129,8 +134,6 @@ export class LikesService {
       .where('like.postUuid IN (:...postUuids)', { postUuids })
       .groupBy('like.postUuid')
       .getRawMany();
-
-    const likeCountMap = new Map<string, number>();
 
     // 모든 게시글에 대해 초기값 0 설정
     postUuids.forEach((id) => likeCountMap.set(id, 0));

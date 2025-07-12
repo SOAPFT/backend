@@ -202,7 +202,7 @@ export class ChallengeService {
     return {
       ...challenge,
       isParticipated,
-      participants, // [{ userUuid, nickname, profileImage }, ...]
+      participants,
     };
   }
 

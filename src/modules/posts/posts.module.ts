@@ -9,9 +9,11 @@ import { ChallengeModule } from '../challenges/challenge.module';
 import { User } from '@/entities/user.entity';
 import { UsersModule } from '../users/users.module';
 import { Comment } from '@/entities/comment.entity';
+import { Suspicion } from '@/entities/suspicion.entity';
+import { Like } from '@/entities/like.entity';
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, User, Comment]),
+    TypeOrmModule.forFeature([Post, User, Comment, Suspicion, Like]),
     forwardRef(() => LikesModule),
     forwardRef(() => CommentsModule),
     forwardRef(() => ChallengeModule),

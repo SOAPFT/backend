@@ -23,6 +23,7 @@ import {
   ApiGetMyPosts,
   ApiGetMyCalendar,
   ApiGetOtherCalendar,
+  ApiReportSuspicion,
 } from './decorators/posts.swagger';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
@@ -193,5 +194,17 @@ export class PostsController {
       Number(page),
       Number(limit),
     );
+  }
+
+  /**
+   * 의심하기
+   */
+  @Post('post/:postUuid/report')
+  @ApiReportSuspicion()
+  async reportPost(
+    @Param('postUuid') postUuid: string,
+    @UserUuid() userUuid: string,
+  ) {
+    return this.postsService.reportSuspiciousPost(userUuid, postUuid);
   }
 }

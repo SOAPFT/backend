@@ -6,6 +6,7 @@ import {
   Req,
   Res,
   UseGuards,
+  Param,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Request, Response } from 'express';
@@ -69,6 +70,37 @@ export class AuthController {
   @ApiDevToken()
   async getDevToken(@Res() res: Response) {
     return this.authService.generateDevToken(res);
+  }
+
+  @Post('seed-tokens')
+  @ApiOperation({
+    summary: '시드 데이터 유저들의 토큰 생성',
+    description:
+      '개발 환경에서만 사용 가능한 시드 데이터 유저들의 JWT 토큰을 생성합니다.',
+  })
+  async getSeedUsersTokens(@Res() res: Response) {
+    return this.authService.generateSeedUsersTokens(res);
+  }
+
+  @Get('seed-users')
+  @ApiOperation({
+    summary: '시드 데이터 사용자 목록 조회',
+    description: '시드 데이터로 생성된 사용자들의 목록을 조회합니다.',
+  })
+  async getSeedUsers(@Res() res: Response) {
+    return this.authService.getSeedUsers(res);
+  }
+
+  @Post('seed-token/:userUuid')
+  @ApiOperation({
+    summary: '특정 시드 데이터 사용자의 토큰 생성',
+    description: '특정 시드 데이터 사용자를 선택해서 JWT 토큰을 생성합니다.',
+  })
+  async getSeedUserToken(
+    @Param('userUuid') userUuid: string,
+    @Res() res: Response,
+  ) {
+    return this.authService.generateSeedUserToken(userUuid, res);
   }
 
   @Get('auth-test')

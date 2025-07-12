@@ -9,18 +9,11 @@ config({ path: `env/.${nodeEnv}.env` });
 // 환경별 경로 설정
 const isProd = process.env.NODE_ENV === 'production';
 const entityPath = isProd
-  ? 'dist/src/**/*.entity.js'
-  : 'src/**/*.entity.{js,ts}';
+  ? 'dist/src/entities/*.entity.js'
+  : 'dist/src/entities/*.entity.js';
 const migrationPath = isProd
   ? 'dist/database/migrations/**/*.js'
-  : 'database/migrations/**/*.{js,ts}';
-const seedPath = isProd
-  ? 'dist/database/seeds/**/*.js'
-  : 'database/seeds/**/*.{js,ts}';
-const factoryPath = isProd
-  ? 'dist/database/factories/**/*.js'
-  : 'database/factories/**/*.{js,ts}';
-
+  : 'database/migrations/**/*.js';
 // NestJS에서 사용되는 설정
 export const typeOrmConfig = (configService: ConfigService): any => {
   return {
@@ -56,9 +49,7 @@ export const dataSourceOptions: DataSourceOptions = {
     process.env.NODE_ENV === 'production'
       ? { rejectUnauthorized: false }
       : false,
-  seeds: [seedPath],
-  factories: [factoryPath],
-} as DataSourceOptions & { seeds?: string[]; factories?: string[] };
+};
 
 // TypeORM CLI를 위한 DataSource 인스턴스
 export const AppDataSource = new DataSource(dataSourceOptions);

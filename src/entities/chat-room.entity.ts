@@ -5,7 +5,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { ChatRoomType } from '@/types/chat.enum';
+import { ChatRoomType } from '../types/chat.enum';
 
 @Entity('chat_room')
 export class ChatRoom {

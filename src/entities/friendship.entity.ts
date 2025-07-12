@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   Unique,
 } from 'typeorm';
-import { FriendshipStatus } from '@/types/friendship.enum';
+import { FriendshipStatus } from '../types/friendship.enum';
 
 @Entity('friendship')
 @Unique(['requesterUuid', 'addresseeUuid'])

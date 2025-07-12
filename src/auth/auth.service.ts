@@ -1,23 +1,23 @@
-import { Auth } from '@/entities/auth.entity';
+import { Auth } from '../entities/auth.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SocialRequest } from './auth.controller';
 import { Request, Response } from 'express';
-import { UsersService } from '@/modules/users/users.service';
+import { UsersService } from '../modules/users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import axios from 'axios';
 import * as bcrypt from 'bcryptjs';
-import { SocialProvider } from '@/types/social-provider.enum';
+import { SocialProvider } from '../types/social-provider.enum';
 import { SocialLoginDto } from './dto/auth.dto';
 import * as ms from 'ms';
-import { UserStatusType } from '@/types/user-status.enum';
-import { decodeTokenHeader } from '@/utils/apple-jwt.util';
+import { UserStatusType } from '../types/user-status.enum';
+import { decodeTokenHeader } from '../utils/apple-jwt.util';
 import { JwksClient } from 'jwks-rsa';
 import { JwtPayload } from './dto/oauth-apple.dto';
 import { ulid } from 'ulid';
-import { ErrorCode } from '@/types/error-code.enum';
-import { CustomException } from '@/utils/custom-exception';
+import { ErrorCode } from '../types/error-code.enum';
+import { CustomException } from '../utils/custom-exception';
 import { generateNickname } from 'starving-orange';
 
 @Injectable()
@@ -121,15 +121,15 @@ export class AuthService {
 
     // accessToken 및 refreshToken 발급
     const findUserPayload = { userUuid: findUser.userUuid };
-    const access_token = await this.jwtService.sign(findUserPayload, {
+    const access_token = await this.jwtService.signAsync(findUserPayload, {
       secret: process.env.JWT_ACCESS_TOKEN_SECRET,
       expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRES_IN,
-    });
+    } as any);
 
-    const refresh_token = await this.jwtService.sign(findUserPayload, {
+    const refresh_token = await this.jwtService.signAsync(findUserPayload, {
       secret: process.env.JWT_REFRESH_TOKEN_SECRET,
       expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRES_IN,
-    });
+    } as any);
 
     const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
 
@@ -156,7 +156,7 @@ export class AuthService {
       await this.authRepository.save(newAuth);
     }
 
-    return res.json({
+    return (res as any).json({
       accessToken: access_token,
       refreshToken: refresh_token,
       isNewUser,
@@ -350,7 +350,7 @@ export class AuthService {
         {
           secret: process.env.JWT_ACCESS_TOKEN_SECRET,
           expiresIn: `${process.env.JWT_ACCESS_TOKEN_EXPIRES_IN}`,
-        },
+        } as any,
       );
 
       // 리프레시 토큰 만료 여부 확인
@@ -360,13 +360,10 @@ export class AuthService {
 
       if (payload.exp && payload.exp < nowInSec) {
         // refreshToken도 만료 => 새 refreshToken 재발급
-        newRefreshToken = this.jwtService.sign(
-          { userUuid: payload.userUuid },
-          {
-            secret: process.env.JWT_REFRESH_TOKEN_SECRET,
-            expiresIn: `${process.env.JWT_REFRESH_TOKEN_EXPIRES_IN}`,
-          },
-        );
+        newRefreshToken = this.jwtService.sign({ userUuid: payload.userUuid }, {
+          secret: process.env.JWT_REFRESH_TOKEN_SECRET,
+          expiresIn: `${process.env.JWT_REFRESH_TOKEN_EXPIRES_IN}`,
+        } as any);
 
         hashedRefreshToken = await bcrypt.hash(newRefreshToken, 10);
 
@@ -374,7 +371,7 @@ export class AuthService {
         await this.authRepository.save(auth);
       }
 
-      return res.json({
+      return (res as any).json({
         message: newRefreshToken
           ? 'accessToken 및 refreshToken 재발급 완료'
           : 'accessToken 재발급 완료',
@@ -418,16 +415,16 @@ export class AuthService {
       const payload = { userUuid };
 
       // 5. 액세스 토큰 발급
-      const access_token = await this.jwtService.sign(payload, {
+      const access_token = await this.jwtService.signAsync(payload, {
         secret: process.env.JWT_ACCESS_TOKEN_SECRET,
         expiresIn: '30d',
-      });
+      } as any);
 
       // 6. 리프레시 토큰 발급
-      const refresh_token = await this.jwtService.sign(payload, {
+      const refresh_token = await this.jwtService.signAsync(payload, {
         secret: process.env.JWT_REFRESH_TOKEN_SECRET,
         expiresIn: '30d',
-      });
+      } as any);
 
       // 7. 리프레시 토큰 해싱
       const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
@@ -449,7 +446,7 @@ export class AuthService {
       }
 
       // 9. 응답 반환
-      return res.json({
+      return (res as any).json({
         accessToken: access_token,
         refreshToken: refresh_token,
       });
@@ -458,6 +455,216 @@ export class AuthService {
       CustomException.throw(
         ErrorCode.INTERNAL_SERVER_ERROR,
         '개발용 토큰 생성 실패',
+      );
+    }
+  }
+
+  /**
+   * 시드 데이터 유저들의 토큰 생성
+   * @param res Express Response 객체
+   */
+  async generateSeedUsersTokens(res: Response) {
+    try {
+      // 1. 모든 사용자 조회 (직접 repository 사용)
+      const userRepository = this.userService['userRepository'];
+      const users = await userRepository.find();
+
+      if (users.length === 0) {
+        CustomException.throw(
+          ErrorCode.USER_NOT_FOUND,
+          '시드 데이터 사용자가 없습니다. 먼저 시드를 실행해주세요.',
+        );
+      }
+
+      // 2. 각 사용자별 토큰 생성
+      const userTokens = [];
+
+      for (const user of users) {
+        const payload = { userUuid: user.userUuid };
+
+        // 액세스 토큰 발급
+        const access_token = await this.jwtService.signAsync(payload, {
+          secret: process.env.JWT_ACCESS_TOKEN_SECRET,
+          expiresIn: '30d',
+        } as any);
+
+        // 리프레시 토큰 발급
+        const refresh_token = await this.jwtService.signAsync(payload, {
+          secret: process.env.JWT_REFRESH_TOKEN_SECRET,
+          expiresIn: '30d',
+        } as any);
+
+        // 리프레시 토큰 해싱
+        const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
+
+        // 기존 인증 정보 확인 후 저장/갱신
+        const existingAuth = await this.authRepository.findOne({
+          where: { userUuid: user.userUuid },
+        });
+
+        const now = new Date();
+        const authData = {
+          userUuid: user.userUuid,
+          refreshToken: hashedRefreshToken,
+          deviceId: 'dev-device',
+          deviceType: 'DEV',
+          appVersion: '1.0.0',
+          lastLoginAt: now,
+          expiresAt: new Date(now.getTime() + this.getRefreshTokenExpiryMs()),
+        };
+
+        if (existingAuth) {
+          Object.assign(existingAuth, authData);
+          await this.authRepository.save(existingAuth);
+        } else {
+          const newAuth = this.authRepository.create(authData);
+          await this.authRepository.save(newAuth);
+        }
+
+        userTokens.push({
+          userId: user.id,
+          userUuid: user.userUuid,
+          nickname: user.nickname,
+          socialProvider: user.socialProvider,
+          accessToken: access_token,
+          refreshToken: refresh_token,
+        });
+      }
+
+      return (res as any).json({
+        message: '시드 데이터 사용자들의 토큰이 성공적으로 생성되었습니다.',
+        totalUsers: users.length,
+        users: userTokens,
+      });
+    } catch (error) {
+      console.error('시드 사용자 토큰 생성 에러:', error);
+      CustomException.throw(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        '시드 사용자 토큰 생성 실패',
+      );
+    }
+  }
+
+  /**
+   * 시드 데이터 사용자 목록 조회
+   * @param res Express Response 객체
+   */
+  async getSeedUsers(res: Response) {
+    try {
+      const userRepository = this.userService['userRepository'];
+      const users = await userRepository.find({
+        select: [
+          'id',
+          'userUuid',
+          'nickname',
+          'socialProvider',
+          'profileImage',
+          'status',
+        ],
+      });
+
+      if (users.length === 0) {
+        CustomException.throw(
+          ErrorCode.USER_NOT_FOUND,
+          '시드 데이터 사용자가 없습니다. 먼저 시드를 실행해주세요.',
+        );
+      }
+
+      return (res as any).json({
+        message: '시드 데이터 사용자 목록 조회 성공',
+        totalUsers: users.length,
+        users: users.map((user) => ({
+          userId: user.id,
+          userUuid: user.userUuid,
+          nickname: user.nickname,
+          socialProvider: user.socialProvider,
+          profileImage: user.profileImage,
+          status: user.status,
+        })),
+      });
+    } catch (error) {
+      console.error('시드 사용자 목록 조회 에러:', error);
+      CustomException.throw(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        '시드 사용자 목록 조회 실패',
+      );
+    }
+  }
+
+  /**
+   * 특정 시드 데이터 사용자의 토큰 생성
+   * @param userUuid 사용자 UUID
+   * @param res Express Response 객체
+   */
+  async generateSeedUserToken(userUuid: string, res: Response) {
+    try {
+      const userRepository = this.userService['userRepository'];
+      const user = await userRepository.findOne({ where: { userUuid } });
+
+      if (!user) {
+        CustomException.throw(
+          ErrorCode.USER_NOT_FOUND,
+          '해당 사용자를 찾을 수 없습니다.',
+        );
+      }
+
+      const payload = { userUuid: user.userUuid };
+
+      // 액세스 토큰 발급
+      const access_token = await this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_ACCESS_TOKEN_SECRET,
+        expiresIn: '30d',
+      } as any);
+
+      // 리프레시 토큰 발급
+      const refresh_token = await this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_REFRESH_TOKEN_SECRET,
+        expiresIn: '30d',
+      } as any);
+
+      // 리프레시 토큰 해싱
+      const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
+
+      // 기존 인증 정보 확인 후 저장/갱신
+      const existingAuth = await this.authRepository.findOne({
+        where: { userUuid: user.userUuid },
+      });
+
+      const now = new Date();
+      const authData = {
+        userUuid: user.userUuid,
+        refreshToken: hashedRefreshToken,
+        deviceId: 'dev-device',
+        deviceType: 'DEV',
+        appVersion: '1.0.0',
+        lastLoginAt: now,
+        expiresAt: new Date(now.getTime() + this.getRefreshTokenExpiryMs()),
+      };
+
+      if (existingAuth) {
+        Object.assign(existingAuth, authData);
+        await this.authRepository.save(existingAuth);
+      } else {
+        const newAuth = this.authRepository.create(authData);
+        await this.authRepository.save(newAuth);
+      }
+
+      return (res as any).json({
+        message: '토큰이 성공적으로 생성되었습니다.',
+        user: {
+          userId: user.id,
+          userUuid: user.userUuid,
+          nickname: user.nickname,
+          socialProvider: user.socialProvider,
+          accessToken: access_token,
+          refreshToken: refresh_token,
+        },
+      });
+    } catch (error) {
+      console.error('시드 사용자 토큰 생성 에러:', error);
+      CustomException.throw(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        '시드 사용자 토큰 생성 실패',
       );
     }
   }

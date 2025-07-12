@@ -48,6 +48,33 @@ export class Post {
   @Column({ name: 'views', type: 'int', default: 0 })
   views: number;
 
+  /** AI 검증 상태 (pending: 대기중, approved: 승인, rejected: 거절, review: 수동검토필요) */
+  @Column({
+    name: 'verification_status',
+    type: 'varchar',
+    default: 'pending',
+    nullable: true,
+  })
+  verificationStatus: 'pending' | 'approved' | 'rejected' | 'review';
+
+  /** AI 분석 신뢰도 (0-100) */
+  @Column({
+    name: 'ai_confidence',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
+  aiConfidence: number;
+
+  /** AI 분석 결과 상세 */
+  @Column({ name: 'ai_analysis_result', type: 'text', nullable: true })
+  aiAnalysisResult: string;
+
+  /** AI 검증 완료 일시 */
+  @Column({ name: 'verified_at', type: 'timestamptz', nullable: true })
+  verifiedAt: Date;
+
   /** 게시글 생성일시 */
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

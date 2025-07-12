@@ -685,4 +685,109 @@ export class ChallengeService {
 
     return result;
   }
+
+  /**
+   * 챌린지 인증글의 검증 상태별 통계 조회
+   */
+  async getChallengeVerificationStats(challengeUuid: string) {
+    const challenge = await this.challengeRepository.findOne({
+      where: { challengeUuid },
+    });
+
+    if (!challenge) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_FOUND,
+        '해당 챌린지를 찾을 수 없습니다.',
+      );
+    }
+
+    // 챌린지 인증글들의 검증 상태별 개수 조회
+    const verificationStats = await this.postRepository
+      .createQueryBuilder('post')
+      .select('post.verificationStatus', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('post.challengeUuid = :challengeUuid', { challengeUuid })
+      .groupBy('post.verificationStatus')
+      .getRawMany();
+
+    const stats = {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      review: 0,
+    };
+
+    verificationStats.forEach((stat) => {
+      const count = parseInt(stat.count);
+      stats.total += count;
+      if (stat.status) {
+        stats[stat.status] = count;
+      }
+    });
+
+    return {
+      message: '챌린지 검증 통계 조회 성공',
+      challengeUuid,
+      challengeTitle: challenge.title,
+      verificationStats: stats,
+    };
+  }
+
+  /**
+   * 챌린지의 검토 필요한 인증글 목록 조회
+   */
+  async getChallengePostsForReview(
+    challengeUuid: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const challenge = await this.challengeRepository.findOne({
+      where: { challengeUuid },
+    });
+
+    if (!challenge) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_FOUND,
+        '해당 챌린지를 찾을 수 없습니다.',
+      );
+    }
+
+    const [posts, total] = await this.postRepository.findAndCount({
+      where: {
+        challengeUuid,
+        verificationStatus: 'review',
+      },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    // 각 게시글의 사용자 정보와 AI 분석 결과 추가
+    const postsWithDetails = await Promise.all(
+      posts.map(async (post) => {
+        const user = await this.userRepository.findOne({
+          where: { userUuid: post.userUuid },
+          select: ['userUuid', 'nickname', 'profileImage'],
+        });
+
+        return {
+          ...post,
+          user,
+          aiAnalysisResult: post.aiAnalysisResult
+            ? JSON.parse(post.aiAnalysisResult)
+            : null,
+        };
+      }),
+    );
+
+    return {
+      message: '검토 필요한 인증글 목록 조회 성공',
+      challengeTitle: challenge.title,
+      total,
+      page,
+      limit,
+      posts: postsWithDetails,
+    };
+  }
 }

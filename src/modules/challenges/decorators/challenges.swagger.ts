@@ -757,3 +757,248 @@ export function ApiGetMonthlyChallengeStats() {
     }),
   );
 }
+
+export function ApiGetChallengeVerificationStats() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '챌린지 AI 검증 통계 조회',
+      description: '특정 챌린지의 AI 검증 상태별 통계를 조회합니다.',
+    }),
+    ApiParam({
+      name: 'challengeUuid',
+      type: String,
+      description: '조회할 챌린지 UUID',
+      example: '01JZZP4T40RB3H2SP70PKBJWNR',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '검증 통계 조회 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          message: {
+            type: 'string',
+            example: '챌린지 검증 통계 조회 성공',
+          },
+          data: {
+            type: 'object',
+            properties: {
+              challengeUuid: {
+                type: 'string',
+                example: '01JZZP4T40RB3H2SP70PKBJWNR',
+              },
+              totalPosts: {
+                type: 'number',
+                example: 150,
+                description: '총 게시글 수',
+              },
+              pendingCount: {
+                type: 'number',
+                example: 5,
+                description: '검증 대기 중인 게시글 수',
+              },
+              approvedCount: {
+                type: 'number',
+                example: 120,
+                description: '승인된 게시글 수',
+              },
+              rejectedCount: {
+                type: 'number',
+                example: 15,
+                description: '거부된 게시글 수',
+              },
+              reviewCount: {
+                type: 'number',
+                example: 10,
+                description: '검토 필요한 게시글 수',
+              },
+              averageConfidence: {
+                type: 'number',
+                example: 0.78,
+                description: '평균 AI 신뢰도 점수',
+              },
+              verificationRate: {
+                type: 'number',
+                example: 0.93,
+                description: '검증 완료율 (대기중 제외)',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: '챌린지를 찾을 수 없음',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'CHALLENGE_001' },
+          message: { type: 'string', example: '챌린지를 찾을 수 없습니다.' },
+          timestamp: { type: 'string', format: 'date-time' },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 500,
+      description: '서버 내부 오류',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'SYS_001' },
+          message: { type: 'string', example: '서버 오류가 발생했습니다.' },
+          timestamp: { type: 'string', format: 'date-time' },
+        },
+      },
+    }),
+  );
+}
+
+export function ApiGetChallengePostsForReview() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '챌린지 검토 필요한 게시글 목록 조회',
+      description:
+        'AI 검증에서 검토가 필요하다고 판단된 게시글들을 조회합니다.',
+    }),
+    ApiParam({
+      name: 'challengeUuid',
+      type: String,
+      description: '조회할 챌린지 UUID',
+      example: '01JZZP4T40RB3H2SP70PKBJWNR',
+    }),
+    ApiQuery({
+      name: 'page',
+      required: false,
+      type: Number,
+      description: '페이지 번호 (기본값: 1)',
+      example: 1,
+    }),
+    ApiQuery({
+      name: 'limit',
+      required: false,
+      type: Number,
+      description: '페이지당 항목 수 (기본값: 10)',
+      example: 10,
+    }),
+    ApiResponse({
+      status: 200,
+      description: '검토 필요한 게시글 목록 조회 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          message: {
+            type: 'string',
+            example: '검토 필요한 게시글 목록 조회 성공',
+          },
+          data: {
+            type: 'object',
+            properties: {
+              posts: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    postUuid: {
+                      type: 'string',
+                      example: '01JZZP4T40RB3H2SP70PKBJWNR',
+                    },
+                    title: {
+                      type: 'string',
+                      example: '오늘의 러닝 인증',
+                    },
+                    content: {
+                      type: 'string',
+                      example: '5km 완주했습니다!',
+                    },
+                    imageUrl: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      example: [
+                        'https://example.com/image1.jpg',
+                        'https://example.com/image2.jpg',
+                      ],
+                    },
+                    verificationStatus: {
+                      type: 'string',
+                      example: 'review',
+                      description: '검증 상태',
+                    },
+                    aiConfidence: {
+                      type: 'number',
+                      example: 0.45,
+                      description: 'AI 신뢰도 점수',
+                    },
+                    aiAnalysisResult: {
+                      type: 'string',
+                      example:
+                        '이미지에서 러닝 관련 요소를 명확히 식별하기 어려워 검토가 필요합니다.',
+                      description: 'AI 분석 결과',
+                    },
+                    createdAt: {
+                      type: 'string',
+                      format: 'date-time',
+                      example: '2025-01-27T10:30:00.000Z',
+                    },
+                    user: {
+                      type: 'object',
+                      properties: {
+                        userUuid: {
+                          type: 'string',
+                          example: '01JZZP4T40RB3H2SP70PKBJWNR',
+                        },
+                        nickname: {
+                          type: 'string',
+                          example: '시원한 포도',
+                        },
+                        profileImage: {
+                          type: 'string',
+                          example: 'https://example.com/profile.jpg',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              pagination: {
+                type: 'object',
+                properties: {
+                  total: { type: 'number', example: 25 },
+                  page: { type: 'number', example: 1 },
+                  limit: { type: 'number', example: 10 },
+                  totalPages: { type: 'number', example: 3 },
+                  hasNextPage: { type: 'boolean', example: true },
+                  hasPrevPage: { type: 'boolean', example: false },
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: '챌린지를 찾을 수 없음',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'CHALLENGE_001' },
+          message: { type: 'string', example: '챌린지를 찾을 수 없습니다.' },
+          timestamp: { type: 'string', format: 'date-time' },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 500,
+      description: '서버 내부 오류',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'SYS_001' },
+          message: { type: 'string', example: '서버 오류가 발생했습니다.' },
+          timestamp: { type: 'string', format: 'date-time' },
+        },
+      },
+    }),
+  );
+}

@@ -11,13 +11,34 @@ import { UsersModule } from '../users/users.module';
 import { Comment } from '@/entities/comment.entity';
 import { Suspicion } from '@/entities/suspicion.entity';
 import { Like } from '@/entities/like.entity';
+import { ImageVerification } from '@/entities/image-verification.entity';
+import { AiModule } from '../ai/ai.module';
+import { Challenge } from '@/entities/challenge.entity';
+import { UploadsModule } from '../uploads/uploads.module';
+import { S3Module } from '../s3/s3.module';
+import { JwtModule } from '@nestjs/jwt';
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, User, Comment, Suspicion, Like]),
+    TypeOrmModule.forFeature([
+      Post,
+      User,
+      Comment,
+      Suspicion,
+      Like,
+      ImageVerification,
+      Challenge,
+    ]),
     forwardRef(() => LikesModule),
     forwardRef(() => CommentsModule),
     forwardRef(() => ChallengeModule),
     forwardRef(() => UsersModule),
+    AiModule,
+    UploadsModule,
+    S3Module,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'your-secret-key',
+      signOptions: { expiresIn: '1h' },
+    }),
   ],
   controllers: [PostsController],
   providers: [PostsService],

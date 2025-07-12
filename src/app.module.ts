@@ -20,6 +20,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ScheduleModule } from '@nestjs/schedule';
 import { FriendshipModule } from './modules/friendship/friendship.module';
 import { BoModule } from './modules/bo/bo.module';
+import { AiModule } from './modules/ai/ai.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -46,6 +47,7 @@ import { BoModule } from './modules/bo/bo.module';
     NotificationsModule,
     FriendshipModule,
     BoModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

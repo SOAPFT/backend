@@ -566,3 +566,113 @@ export function ApiReportSuspicion() {
     }),
   );
 }
+
+export function ApiGetPostVerificationStatus() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '게시글 AI 검증 상태 조회',
+      description: '특정 게시글의 AI 검증 상태와 분석 결과를 조회합니다.',
+    }),
+    ApiParam({
+      name: 'postUuid',
+      type: String,
+      description: '조회할 게시글 UUID',
+      example: '01JZZP4T40RB3H2SP70PKBJWNR',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '검증 상태 조회 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          message: {
+            type: 'string',
+            example: '게시글 검증 상태 조회 성공',
+          },
+          data: {
+            type: 'object',
+            properties: {
+              postUuid: {
+                type: 'string',
+                example: '01JZZP4T40RB3H2SP70PKBJWNR',
+              },
+              verificationStatus: {
+                type: 'string',
+                enum: ['pending', 'approved', 'rejected', 'review'],
+                example: 'approved',
+                description:
+                  '검증 상태 (pending: 대기중, approved: 승인됨, rejected: 거부됨, review: 검토 필요)',
+              },
+              aiConfidence: {
+                type: 'number',
+                example: 0.85,
+                description: 'AI 신뢰도 점수 (0-1 사이)',
+              },
+              aiAnalysisResult: {
+                type: 'string',
+                example:
+                  '이미지에서 러닝화와 GPS 앱이 확인되어 러닝 챌린지와 관련성이 높습니다.',
+                description: 'AI 분석 결과 설명',
+              },
+              verifiedAt: {
+                type: 'string',
+                format: 'date-time',
+                example: '2025-01-27T10:30:00.000Z',
+                description: '검증 완료 시간',
+              },
+              images: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    imageUrl: {
+                      type: 'string',
+                      example: 'https://example.com/image.jpg',
+                    },
+                    verificationStatus: {
+                      type: 'string',
+                      enum: ['pending', 'approved', 'rejected', 'review'],
+                      example: 'approved',
+                    },
+                    confidence: {
+                      type: 'number',
+                      example: 0.85,
+                    },
+                    analysisResult: {
+                      type: 'string',
+                      example: '러닝화 이미지가 명확하게 식별되었습니다.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: '게시글을 찾을 수 없음',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'POST_001' },
+          message: { type: 'string', example: '해당 게시글이 없습니다.' },
+          timestamp: { type: 'string', format: 'date-time' },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 500,
+      description: '서버 내부 오류',
+      schema: {
+        type: 'object',
+        properties: {
+          errorCode: { type: 'string', example: 'SYS_001' },
+          message: { type: 'string', example: '서버 오류가 발생했습니다.' },
+          timestamp: { type: 'string', format: 'date-time' },
+        },
+      },
+    }),
+  );
+}

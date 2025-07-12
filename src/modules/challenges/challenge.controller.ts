@@ -28,6 +28,8 @@ import {
   ApiGetUserChallengeProgress,
   ApiSearchChallenges,
   ApiGetMonthlyChallengeStats,
+  ApiGetChallengeVerificationStats,
+  ApiGetChallengePostsForReview,
 } from './decorators/challenges.swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
@@ -235,6 +237,40 @@ export class ChallengeController {
       challengeUuid,
       parseInt(year),
       parseInt(month),
+    );
+  }
+
+  /**
+   * 챌린지 검증 상태 통계 조회
+   * @param challengeUuid 챌린지 UUID
+   * @returns 검증 상태별 통계
+   */
+  @Get(':challengeUuid/verification-stats')
+  @ApiGetChallengeVerificationStats()
+  async getChallengeVerificationStats(
+    @Param('challengeUuid') challengeUuid: string,
+  ) {
+    return this.challengeService.getChallengeVerificationStats(challengeUuid);
+  }
+
+  /**
+   * 챌린지의 검토 필요한 인증글 목록 조회
+   * @param challengeUuid 챌린지 UUID
+   * @param page 페이지 번호
+   * @param limit 페이지당 개수
+   * @returns 검토 필요한 인증글 목록
+   */
+  @Get(':challengeUuid/review')
+  @ApiGetChallengePostsForReview()
+  async getChallengePostsForReview(
+    @Param('challengeUuid') challengeUuid: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    return this.challengeService.getChallengePostsForReview(
+      challengeUuid,
+      Number(page),
+      Number(limit),
     );
   }
 }

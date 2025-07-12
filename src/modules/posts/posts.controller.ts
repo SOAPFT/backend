@@ -11,8 +11,17 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiConsumes,
+  ApiBody,
+  ApiOperation,
+} from '@nestjs/swagger';
 import {
   ApiCreatePost,
   ApiDeletePost,
@@ -24,6 +33,7 @@ import {
   ApiGetMyCalendar,
   ApiGetOtherCalendar,
   ApiReportSuspicion,
+  ApiGetPostVerificationStatus,
 } from './decorators/posts.swagger';
 import { UserUuid } from '@/decorators/user-uuid.decorator';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
@@ -36,10 +46,97 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   /**
-   * 사용자 게시글 생성
-   * @param createPostDto 게시글 생성 정보
-   * @param userUuid 사용자 UUID
-   * @returns 생성된 게시글 정보
+   * 게시글 생성 전 이미지 AI 검증
+   */
+  @Post('precheck-images')
+  @UseInterceptors(FilesInterceptor('images', 5))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: '게시글 생성 전 이미지 AI 검증',
+    description: `
+      게시글 작성 전에 이미지를 업로드하고 AI가 챌린지 관련성을 검증합니다.
+      - 이미지 S3 업로드
+      - Bedrock AI 분석
+      - 즉시 결과 반환 (approve/reject/review)
+    `,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        challengeUuid: {
+          type: 'string',
+          description: '챌린지 UUID',
+          example: '01JZZ7V6QKM61EM8CK3D6WA885',
+        },
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: '검증할 이미지들 (최대 5개)',
+        },
+      },
+    },
+  })
+  async precheckImages(
+    @Body('challengeUuid') challengeUuid: string,
+    @UploadedFiles() images: Express.Multer.File[],
+    @UserUuid() userUuid: string,
+  ) {
+    return this.postsService.precheckImagesForChallenge(
+      challengeUuid,
+      images,
+      userUuid,
+    );
+  }
+
+  /**
+   * AI 검증 완료된 이미지로 게시글 생성
+   */
+  @Post('create-verified')
+  @ApiOperation({
+    summary: 'AI 검증 완료된 이미지로 게시글 생성',
+    description: '이미 AI 검증을 통과한 이미지들로 게시글을 생성합니다.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', example: '런닝 챌린지 5일차 인증' },
+        content: { type: 'string', example: '오늘 5km 뛰었습니다!' },
+        challengeUuid: { type: 'string' },
+        verifiedImageUrls: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'AI 검증을 통과한 이미지 URL들',
+        },
+        verificationToken: {
+          type: 'string',
+          description: 'AI 검증 완료 토큰 (보안용)',
+        },
+        isPublic: { type: 'boolean', default: true },
+      },
+    },
+  })
+  async createVerifiedPost(
+    @Body()
+    createVerifiedPostDto: {
+      title: string;
+      content: string;
+      challengeUuid: string;
+      verifiedImageUrls: string[];
+      verificationToken: string;
+      isPublic?: boolean;
+    },
+    @UserUuid() userUuid: string,
+  ) {
+    return this.postsService.createVerifiedPost(
+      createVerifiedPostDto,
+      userUuid,
+    );
+  }
+
+  /**
+   * 기존 게시글 생성
    */
   @Post()
   @ApiCreatePost()
@@ -51,11 +148,7 @@ export class PostsController {
   }
 
   /**
-   * 현재 로그인한 사용자의 게시글 조회 (페이지네이션)
-   * @param userUuid 사용자 UUID
-   * @param page 페이지 번호
-   * @param limit 페이지당 아이템 수
-   * @returns 게시글 목록
+   * 현재 로그인한 사용자의 게시글 조회
    */
   @Get('my')
   @ApiGetMyPosts()
@@ -73,10 +166,6 @@ export class PostsController {
 
   /**
    * 현재 로그인한 사용자의 게시글 캘린더 조회
-   * @param userUuid 사용자 UUID
-   * @param year
-   * @param month
-   * @returns
    */
   @Get('calendar')
   @ApiGetMyCalendar()
@@ -91,12 +180,7 @@ export class PostsController {
 
   /**
    * 다른 사용자의 게시글 캘린더 조회
-   * @param userUuid
-   * @param year
-   * @param month
-   * @returns
    */
-
   @Get('calendar/:userUuid')
   @ApiGetOtherCalendar()
   async getOtherCalendar(
@@ -109,10 +193,7 @@ export class PostsController {
   }
 
   /**
-   * 특정 사용자의 게시글 목록 조회 (페이지네이션)
-   * @param userUuid 조회할 사용자 UUID
-   * @param page 페이지 번호
-   * @param limit 페이지당 개수
+   * 특정 사용자의 게시글 목록 조회
    */
   @Get('user/:userUuid')
   @ApiGetUserPosts()
@@ -130,9 +211,6 @@ export class PostsController {
 
   /**
    * 게시글 상세 조회
-   * @param postUuid 게시글 ULID
-   * @param userUuid 사용자 UUID
-   * @returns 게시글 상세 정보
    */
   @Get(':postUuid')
   @ApiGetPostDetail()
@@ -145,10 +223,6 @@ export class PostsController {
 
   /**
    * 게시글 수정
-   * @param postUuid 게시글 ULID
-   * @param updatePostDto 게시글 수정 정보
-   * @param userUuid 사용자 UUID
-   * @returns 수정된 게시글 정보
    */
   @Patch(':postUuid')
   @ApiUpdatePost()
@@ -166,9 +240,6 @@ export class PostsController {
 
   /**
    * 게시글 삭제
-   * @param postUuid 게시글 ULID
-   * @param userUuid 사용자 UUID
-   * @returns 삭제된 게시글 정보
    */
   @Delete(':postUuid')
   @ApiDeletePost()
@@ -180,7 +251,7 @@ export class PostsController {
   }
 
   /**
-   * 특정 챌린지의 게시글 목록 조회 (페이지네이션)
+   * 특정 챌린지의 게시글 목록 조회
    */
   @Get('/challenge/:challengeUuid')
   @ApiGetPostsByChallenge()
@@ -197,7 +268,7 @@ export class PostsController {
   }
 
   /**
-   * 의심하기
+   * 게시글 의심하기
    */
   @Post('post/:postUuid/report')
   @ApiReportSuspicion()
@@ -206,5 +277,14 @@ export class PostsController {
     @UserUuid() userUuid: string,
   ) {
     return this.postsService.reportSuspiciousPost(userUuid, postUuid);
+  }
+
+  /**
+   * 게시글 검증 상태 조회
+   */
+  @Get(':postUuid/verification')
+  @ApiGetPostVerificationStatus()
+  async getPostVerificationStatus(@Param('postUuid') postUuid: string) {
+    return this.postsService.getPostVerificationStatus(postUuid);
   }
 }

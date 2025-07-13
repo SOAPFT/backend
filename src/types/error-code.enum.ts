@@ -128,6 +128,10 @@ export enum ErrorCode {
   NOTIFICATION_ALREADY_READ = 'NOTIFICATION_002',
   PUSH_TOKEN_INVALID = 'NOTIFICATION_003',
   PUSH_SEND_FAILED = 'NOTIFICATION_004',
+  PUSH_PROVIDER_NOT_INITIALIZED = 'NOTIFICATION_005',
+  PUSH_PROVIDER_CONNECTION_FAILED = 'NOTIFICATION_006',
+  PUSH_INVALID_DEVICE_TOKEN = 'NOTIFICATION_007',
+  PUSH_PROVIDER_CONFIGURATION_ERROR = 'NOTIFICATION_008',
 
   // === 신고 ===
   REPORT_NOT_FOUND = 'REPORT_001',
@@ -647,6 +651,26 @@ export const ERROR_CODE_INFO: Record<ErrorCode, ErrorCodeInfo> = {
   [ErrorCode.PUSH_SEND_FAILED]: {
     code: 'NOTIFICATION_004',
     message: '푸시 알림 전송에 실패했습니다.',
+    httpStatus: HttpStatus.INTERNAL_SERVER_ERROR,
+  },
+  [ErrorCode.PUSH_PROVIDER_NOT_INITIALIZED]: {
+    code: 'NOTIFICATION_005',
+    message: 'APNs 푸시 서비스가 초기화되지 않았습니다.',
+    httpStatus: HttpStatus.SERVICE_UNAVAILABLE,
+  },
+  [ErrorCode.PUSH_PROVIDER_CONNECTION_FAILED]: {
+    code: 'NOTIFICATION_006',
+    message: 'APNs 서버 연결에 실패했습니다.',
+    httpStatus: HttpStatus.BAD_GATEWAY,
+  },
+  [ErrorCode.PUSH_INVALID_DEVICE_TOKEN]: {
+    code: 'NOTIFICATION_007',
+    message: '유효하지 않은 디바이스 토큰입니다.',
+    httpStatus: HttpStatus.BAD_REQUEST,
+  },
+  [ErrorCode.PUSH_PROVIDER_CONFIGURATION_ERROR]: {
+    code: 'NOTIFICATION_008',
+    message: 'APNs 서비스 설정에 오류가 있습니다.',
     httpStatus: HttpStatus.INTERNAL_SERVER_ERROR,
   },
 

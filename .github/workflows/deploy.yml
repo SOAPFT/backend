@@ -32,6 +32,10 @@ jobs:
           cp package.json deploy/
           cp package-lock.json deploy/
 
+          # APNs 인증서 파일 생성
+          mkdir -p deploy/certs
+          echo "${{ secrets.APNS_AUTH_KEY }}" > deploy/certs/AuthKey_${{ secrets.APNS_KEY_ID }}.p8
+
           # 환경 변수 파일 생성
           echo "${{ secrets.SERVER_ENV }}" > deploy/.env
           echo "${{ secrets.SERVER_ENV }}" > deploy/.production.env
@@ -70,6 +74,10 @@ jobs:
             cp -f deploy/package-lock.json /home/${{ secrets.EC2_USERNAME }}/apps/backend/
             cp -f deploy/.env /home/${{ secrets.EC2_USERNAME }}/apps/backend/
             
+            # APNs 인증서 파일 복사
+            mkdir -p /home/${{ secrets.EC2_USERNAME }}/apps/backend/certs
+            cp -r deploy/certs/* /home/${{ secrets.EC2_USERNAME }}/apps/backend/certs/
+            
             # 환경 변수 파일 복사
             mkdir -p /home/${{ secrets.EC2_USERNAME }}/apps/backend/env
             cp -f deploy/.production.env /home/${{ secrets.EC2_USERNAME }}/apps/backend/env/.production.env
@@ -86,7 +94,7 @@ jobs:
             # PM2 설정 저장
             pm2 save
             
-            # 임시 파일 정리
+            # 임시 파일 정리 (보안을 위해 인증서 파일도 안전하게 삭제)
             rm -rf /home/${{ secrets.EC2_USERNAME }}/deploy
             rm /home/${{ secrets.EC2_USERNAME }}/deploy.tar.gz
           "

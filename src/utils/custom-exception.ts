@@ -243,4 +243,39 @@ export class BusinessException {
       notificationId,
     });
   }
+
+  // === 푸시 알림 관련 ===
+  static pushProviderNotInitialized(): never {
+    CustomException.throw(ErrorCode.PUSH_PROVIDER_NOT_INITIALIZED);
+  }
+
+  static pushProviderConnectionFailed(reason?: string): never {
+    CustomException.throw(
+      ErrorCode.PUSH_PROVIDER_CONNECTION_FAILED,
+      reason ? `APNs 서버 연결 실패: ${reason}` : undefined,
+      { reason },
+    );
+  }
+
+  static pushInvalidDeviceToken(deviceToken: string): never {
+    CustomException.throw(ErrorCode.PUSH_INVALID_DEVICE_TOKEN, undefined, {
+      deviceToken: deviceToken.substring(0, 8) + '...',
+    });
+  }
+
+  static pushProviderConfigurationError(reason?: string): never {
+    CustomException.throw(
+      ErrorCode.PUSH_PROVIDER_CONFIGURATION_ERROR,
+      reason ? `APNs 설정 오류: ${reason}` : undefined,
+      { reason },
+    );
+  }
+
+  static pushSendFailed(deviceToken: string, reason?: string): never {
+    CustomException.throw(
+      ErrorCode.PUSH_SEND_FAILED,
+      reason ? `푸시 전송 실패: ${reason}` : undefined,
+      { deviceToken: deviceToken.substring(0, 8) + '...', reason },
+    );
+  }
 }

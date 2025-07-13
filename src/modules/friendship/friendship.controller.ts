@@ -17,10 +17,9 @@ import {
   ApiSearchUsersWithFriendStatus,
 } from './decorators/friendship.swagger';
 
-@ApiTags('frendship')
+@ApiTags('friendship')
 @Controller('friendship')
 @ApiBearerAuth('JWT-auth')
-@Controller('friendship')
 @UseGuards(JwtAuthGuard)
 export class FriendshipController {
   constructor(private readonly friendshipService: FriendshipService) {}

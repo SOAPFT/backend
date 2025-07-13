@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Notification } from '@/entities/notification.entity';
@@ -12,18 +12,22 @@ import {
 } from './dto/notification-response.dto';
 import { NotificationType } from '@/types/notification.enum';
 import { BusinessException } from '@/utils/custom-exception';
+import { UserPushService } from './user-push.service';
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private userPushService: UserPushService,
   ) {}
 
   /**
-   * 새 알림 생성
+   * 새 알림 생성 + 푸시 알림 발송
    */
   async createNotification(
     createNotificationDto: CreateNotificationDto,
@@ -48,13 +52,139 @@ export class NotificationsService {
       }
     }
 
+    // 알림 저장
     const notification = this.notificationRepository.create(
       createNotificationDto,
     );
     const savedNotification =
       await this.notificationRepository.save(notification);
 
+    // 푸시 알림 발송 (비동기)
+    this.sendPushNotificationAsync(savedNotification);
+
     return this.mapToResponseDto(savedNotification);
+  }
+
+  /**
+   * 비동기 푸시 알림 발송
+   */
+  private async sendPushNotificationAsync(
+    notification: Notification,
+  ): Promise<void> {
+    try {
+      // 미읽음 알림 개수 조회
+      const unreadCount = await this.notificationRepository.count({
+        where: {
+          recipientUuid: notification.recipientUuid,
+          isRead: false,
+        },
+      });
+
+      // 푸시 알림 발송
+      const result = await this.userPushService.sendPushToUser(
+        notification.recipientUuid,
+        {
+          title: notification.title,
+          body: notification.content,
+          badge: unreadCount,
+          data: {
+            notificationId: notification.id,
+            type: notification.type,
+            ...notification.data,
+          },
+        },
+      );
+
+      // 발송 상태 업데이트
+      if (result.sent > 0) {
+        await this.notificationRepository.update(notification.id, {
+          isSent: true,
+        });
+      }
+
+      this.logger.log(
+        `푸시 알림 발송 완료 - 성공: ${result.sent}, 실패: ${result.failed}`,
+      );
+    } catch (error) {
+      this.logger.error('푸시 알림 발송 실패:', error);
+    }
+  }
+
+  /**
+   * 여러 사용자에게 동일한 알림 발송
+   */
+  async createBulkNotifications(
+    recipientUuids: string[],
+    notificationData: Omit<CreateNotificationDto, 'recipientUuid'>,
+  ): Promise<{ success: number; failed: number }> {
+    let success = 0;
+    let failed = 0;
+
+    // 알림들을 먼저 저장
+    const notifications: Notification[] = [];
+
+    for (const recipientUuid of recipientUuids) {
+      try {
+        const notification = this.notificationRepository.create({
+          ...notificationData,
+          recipientUuid,
+        });
+        const savedNotification =
+          await this.notificationRepository.save(notification);
+        notifications.push(savedNotification);
+        success++;
+      } catch (error) {
+        this.logger.error(`알림 저장 실패: ${recipientUuid}`, error);
+        failed++;
+      }
+    }
+
+    // 성공적으로 저장된 알림들에 대해 푸시 발송
+    if (notifications.length > 0) {
+      this.sendBulkPushNotificationAsync(notifications);
+    }
+
+    this.logger.log(`대량 알림 생성 완료 - 성공: ${success}, 실패: ${failed}`);
+    return { success, failed };
+  }
+
+  /**
+   * 대량 푸시 알림 발송
+   */
+  private async sendBulkPushNotificationAsync(
+    notifications: Notification[],
+  ): Promise<void> {
+    try {
+      const userUuids = notifications.map((n) => n.recipientUuid);
+
+      // 각 사용자의 미읽음 개수 조회는 생략하고 기본값 사용
+      // (성능을 위해 - 필요시 개별 조회 로직 추가 가능)
+
+      const result = await this.userPushService.sendPushToUsers(userUuids, {
+        title: notifications[0].title, // 동일한 제목이라 가정
+        body: notifications[0].content, // 동일한 내용이라 가정
+        badge: 1, // 기본 배지값
+        data: {
+          type: notifications[0].type,
+          // 개별 데이터는 생략 (대량 발송시)
+        },
+      });
+
+      // 발송 성공한 알림들의 상태 업데이트
+      if (result.sent > 0) {
+        const notificationIds = notifications.map((n) => n.id);
+        await this.notificationRepository.update(
+          { id: In(notificationIds) },
+          { isSent: true },
+        );
+      }
+
+      this.logger.log(
+        `대량 푸시 발송 완료 - 성공: ${result.sent}, 실패: ${result.failed}`,
+      );
+    } catch (error) {
+      this.logger.error('대량 푸시 발송 실패:', error);
+    }
   }
 
   /**
@@ -213,7 +343,7 @@ export class NotificationsService {
   }
 
   /**
-   * 친구 요청 알림 생성 (다른 모듈에서 호출)
+   * 친구 요청 알림 생성
    */
   async createFriendRequestNotification(
     recipientUuid: string,
@@ -231,7 +361,7 @@ export class NotificationsService {
   }
 
   /**
-   * 친구 수락 알림 생성 (다른 모듈에서 호출)
+   * 친구 수락 알림 생성
    */
   async createFriendAcceptedNotification(
     recipientUuid: string,
@@ -249,7 +379,7 @@ export class NotificationsService {
   }
 
   /**
-   * 챌린지 초대 알림 생성 (다른 모듈에서 호출)
+   * 챌린지 초대 알림 생성
    */
   async createChallengeInviteNotification(
     recipientUuid: string,
@@ -269,7 +399,7 @@ export class NotificationsService {
   }
 
   /**
-   * 게시글 좋아요 알림 생성 (다른 모듈에서 호출)
+   * 게시글 좋아요 알림 생성
    */
   async createPostLikeNotification(
     recipientUuid: string,
@@ -288,7 +418,7 @@ export class NotificationsService {
   }
 
   /**
-   * 게시글 댓글 알림 생성 (다른 모듈에서 호출)
+   * 게시글 댓글 알림 생성
    */
   async createPostCommentNotification(
     recipientUuid: string,
@@ -308,7 +438,7 @@ export class NotificationsService {
   }
 
   /**
-   * 새 메시지 알림 생성 (다른 모듈에서 호출)
+   * 새 메시지 알림 생성
    */
   async createNewMessageNotification(
     recipientUuid: string,

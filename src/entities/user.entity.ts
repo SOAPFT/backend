@@ -60,7 +60,16 @@ export class User {
   @Column({ name: 'coins', type: 'int', default: 0 })
   coins: number;
 
-  /** iOS 푸시 알림 토큰 */
+  /** iOS 푸시 알림 토큰 (다중 디바이스 지원을 위해 JSON 배열로 저장) */
+  @Column({
+    name: 'push_tokens',
+    type: 'json',
+    nullable: true,
+    comment: 'iOS/Android 푸시 토큰들을 JSON 배열로 저장',
+  })
+  pushTokens: string[];
+
+  /** 레거시 푸시 토큰 */
   @Column({ name: 'push_token', type: 'varchar', nullable: true })
   pushToken: string;
 

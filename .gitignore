@@ -29,6 +29,13 @@ lerna-debug.log*
 .settings/
 *.sublime-workspace
 
+# Security - Certificates and Keys
+/certs/
+/keys/
+*.p8
+*.p12
+*.pem
+
 # IDE - VSCode
 .vscode/*
 !.vscode/settings.json
@@ -58,3 +65,4 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 *.env
 *.sql
+*.p8

@@ -297,3 +297,332 @@ export function ApiDeleteNotification() {
     ApiResponse(CommonErrorResponses.InternalServerError),
   );
 }
+
+export function ApiSendPush() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '푸시알림 전송',
+      description: '단일 디바이스에 푸시알림을 전송합니다.',
+    }),
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['deviceToken', 'title', 'body'],
+        properties: {
+          deviceToken: {
+            type: 'string',
+            description: '디바이스 토큰',
+            example:
+              'a9d0ed10e9cfd022a61cb08753f49c5a0b0dfb383697bf9f9d750a1003da19c7',
+          },
+          title: {
+            type: 'string',
+            description: '푸시알림 제목',
+            example: '새로운 메시지',
+          },
+          body: {
+            type: 'string',
+            description: '푸시알림 내용',
+            example: '김철수님이 메시지를 보냈습니다.',
+          },
+          badge: {
+            type: 'number',
+            description: '배지 수',
+            example: 1,
+          },
+          sound: {
+            type: 'string',
+            description: '알림 소리',
+            example: 'default',
+          },
+          data: {
+            type: 'object',
+            description: '추가 데이터',
+            example: { messageId: 123, type: 'message' },
+          },
+          category: {
+            type: 'string',
+            description: '알림 카테고리',
+            example: 'MESSAGE_CATEGORY',
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 200,
+      description: '푸시알림 전송 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          sent: { type: 'number', example: 1 },
+          failed: { type: 'number', example: 0 },
+          invalidTokens: {
+            type: 'array',
+            items: { type: 'string' },
+            example: [],
+          },
+        },
+      },
+    }),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_005',
+        'APNs 푸시 서비스가 초기화되지 않았습니다.',
+        503,
+      ),
+    ),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_006',
+        'APNs 서버 연결에 실패했습니다.',
+        502,
+      ),
+    ),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_007',
+        '유효하지 않은 디바이스 토큰입니다.',
+        400,
+      ),
+    ),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_008',
+        'APNs 서비스 설정에 오류가 있습니다.',
+        500,
+      ),
+    ),
+    ApiResponse(CommonAuthResponses.Unauthorized),
+    ApiResponse(CommonErrorResponses.ValidationFailed),
+    ApiResponse(CommonErrorResponses.InternalServerError),
+  );
+}
+
+export function ApiSendPushMultiple() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '다중 푸시알림 전송',
+      description: '여러 디바이스에 푸시알림을 동시에 전송합니다.',
+    }),
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['deviceTokens', 'title', 'body'],
+        properties: {
+          deviceTokens: {
+            type: 'array',
+            items: { type: 'string' },
+            description: '디바이스 토큰 배열',
+            example: [
+              'a9d0ed10e9cfd022a61cb08753f49c5a0b0dfb383697bf9f9d750a1003da19c7',
+              'b8c1fe21f0dfe133b72dc19864g50d6b1c1egc484708cgag851b1104eb20d8',
+            ],
+          },
+          title: {
+            type: 'string',
+            description: '푸시알림 제목',
+            example: '새로운 공지사항',
+          },
+          body: {
+            type: 'string',
+            description: '푸시알림 내용',
+            example: '새로운 업데이트가 있습니다.',
+          },
+          badge: {
+            type: 'number',
+            description: '배지 수',
+            example: 1,
+          },
+          sound: {
+            type: 'string',
+            description: '알림 소리',
+            example: 'default',
+          },
+          data: {
+            type: 'object',
+            description: '추가 데이터',
+            example: { announcementId: 456, type: 'announcement' },
+          },
+          category: {
+            type: 'string',
+            description: '알림 카테고리',
+            example: 'ANNOUNCEMENT_CATEGORY',
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 200,
+      description: '푸시알림 전송 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          sent: { type: 'number', example: 2 },
+          failed: { type: 'number', example: 0 },
+          invalidTokens: {
+            type: 'array',
+            items: { type: 'string' },
+            example: [],
+          },
+          errors: {
+            type: 'array',
+            items: { type: 'string' },
+            example: [],
+          },
+        },
+      },
+    }),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_005',
+        'APNs 푸시 서비스가 초기화되지 않았습니다.',
+        503,
+      ),
+    ),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_006',
+        'APNs 서버 연결에 실패했습니다.',
+        502,
+      ),
+    ),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_007',
+        '유효하지 않은 디바이스 토큰입니다.',
+        400,
+      ),
+    ),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_008',
+        'APNs 서비스 설정에 오류가 있습니다.',
+        500,
+      ),
+    ),
+    ApiResponse(CommonAuthResponses.Unauthorized),
+    ApiResponse(CommonErrorResponses.ValidationFailed),
+    ApiResponse(CommonErrorResponses.InternalServerError),
+  );
+}
+
+export function ApiSendTestPush() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '테스트 푸시알림 전송',
+      description: '테스트용 푸시알림을 전송합니다.',
+    }),
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['deviceToken'],
+        properties: {
+          deviceToken: {
+            type: 'string',
+            description: '디바이스 토큰',
+            example:
+              'a9d0ed10e9cfd022a61cb08753f49c5a0b0dfb383697bf9f9d750a1003da19c7',
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 200,
+      description: '테스트 푸시알림 전송 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          sent: { type: 'number', example: 1 },
+          failed: { type: 'number', example: 0 },
+          invalidTokens: {
+            type: 'array',
+            items: { type: 'string' },
+            example: [],
+          },
+          message: {
+            type: 'string',
+            example: '테스트 푸시알림이 전송되었습니다.',
+          },
+        },
+      },
+    }),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_005',
+        'APNs 푸시 서비스가 초기화되지 않았습니다.',
+        503,
+      ),
+    ),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_006',
+        'APNs 서버 연결에 실패했습니다.',
+        502,
+      ),
+    ),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_007',
+        '유효하지 않은 디바이스 토큰입니다.',
+        400,
+      ),
+    ),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_008',
+        'APNs 서비스 설정에 오류가 있습니다.',
+        500,
+      ),
+    ),
+    ApiResponse(CommonAuthResponses.Unauthorized),
+    ApiResponse(CommonErrorResponses.ValidationFailed),
+    ApiResponse(CommonErrorResponses.InternalServerError),
+  );
+}
+
+export function ApiGetPushStatus() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '푸시알림 서비스 상태 확인',
+      description: 'APNs 푸시알림 서비스의 연결 상태를 확인합니다.',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '푸시알림 서비스 상태 조회 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          isReady: { type: 'boolean', example: true },
+          status: {
+            type: 'string',
+            example: 'connected',
+            enum: ['connected', 'disconnected', 'initializing', 'error'],
+          },
+          message: {
+            type: 'string',
+            example: 'APNs 서비스가 정상적으로 동작중입니다.',
+          },
+        },
+      },
+    }),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_005',
+        'APNs 푸시 서비스가 초기화되지 않았습니다.',
+        503,
+      ),
+    ),
+    ApiResponse(
+      createErrorResponse(
+        'NOTIFICATION_008',
+        'APNs 서비스 설정에 오류가 있습니다.',
+        500,
+      ),
+    ),
+    ApiResponse(CommonAuthResponses.Unauthorized),
+    ApiResponse(CommonErrorResponses.InternalServerError),
+  );
+}

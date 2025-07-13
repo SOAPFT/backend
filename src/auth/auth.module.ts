@@ -23,5 +23,6 @@ import { Friendship } from '@/entities/friendship.entity';
   ],
   controllers: [AuthController],
   providers: [AuthService, UsersService, JwtStrategy],
+  exports: [JwtStrategy, PassportModule],
 })
 export class AuthModule {}

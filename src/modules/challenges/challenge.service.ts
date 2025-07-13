@@ -7,12 +7,14 @@ import { UpdateChallengeDto } from './dto/update-challenge.dto';
 import { FindAllChallengesDto } from './dto/find-all-challenges.dto';
 import { User } from '@/entities/user.entity';
 import { Post } from '@/entities/post.entity';
+import { ChatService } from '../chat/chat.service';
 import { ulid } from 'ulid';
 import {
   ChallengeType,
   GenderType,
   ChallengeFilterType,
 } from '@/types/challenge.enum';
+import { ChatRoomType } from '@/types/chat.enum';
 import { CustomException } from '@/utils/custom-exception';
 import { ErrorCode } from '@/types/error-code.enum';
 import { MoreThan, LessThan, MoreThanOrEqual, Between, ILike } from 'typeorm';
@@ -39,6 +41,7 @@ export class ChallengeService {
     private userRepository: Repository<User>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
+    private chatService: ChatService,
   ) {}
 
   /**
@@ -122,6 +125,20 @@ export class ChallengeService {
 
     await this.challengeRepository.save(challenge);
     await this.userRepository.save(user);
+
+    // 챌린지 채팅방 자동 생성
+    try {
+      await this.chatService.createChatRoom(userUuid, {
+        type: ChatRoomType.GROUP,
+        participantUuids: [userUuid],
+        name: `${createChallengeDto.title} 채팅방`,
+        challengeUuid: challenge.challengeUuid,
+      });
+    } catch (error) {
+      // 채팅방 생성 실패 시 로그만 남기고 계속 진행
+      console.error('채팅방 생성 실패:', error);
+    }
+
     return {
       message: '챌린지가 성공적으로 생성되었습니다.',
       challengeUuid: challenge.challengeUuid,
@@ -405,6 +422,17 @@ export class ChallengeService {
     await this.challengeRepository.save(challenge);
     await this.userRepository.save(user);
 
+    // 챌린지 채팅방에 자동 참여
+    try {
+      await this.chatService.addParticipantToChallengeRoom(
+        challengeUuid,
+        userUuid,
+      );
+    } catch (error) {
+      // 채팅방 참여 실패 시 로그만 남기고 계속 진행
+      console.error('채팅방 참여 실패:', error);
+    }
+
     return {
       message: '참가 완료',
       challengeUuid,
@@ -514,6 +542,17 @@ export class ChallengeService {
     );
 
     await this.challengeRepository.save(challenge);
+
+    // 챌린지 채팅방에서 자동 나가기
+    try {
+      await this.chatService.removeParticipantFromChallengeRoom(
+        challengeUuid,
+        userUuid,
+      );
+    } catch (error) {
+      // 채팅방 나가기 실패 시 로그만 남기고 계속 진행
+      console.error('채팅방 나가기 실패:', error);
+    }
 
     return {
       message: '챌린지에서 성공적으로 탈퇴했습니다.',

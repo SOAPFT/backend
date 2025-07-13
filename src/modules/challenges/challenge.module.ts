@@ -6,6 +6,7 @@ import { Post } from '@/entities/post.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from '../users/users.module';
 import { PostsModule } from '../posts/posts.module';
+import { ChatModule } from '../chat/chat.module';
 import { forwardRef } from '@nestjs/common';
 import { ChallengeService } from './challenge.service';
 
@@ -14,6 +15,7 @@ import { ChallengeService } from './challenge.service';
     TypeOrmModule.forFeature([Challenge, User, Post]),
     forwardRef(() => UsersModule),
     forwardRef(() => PostsModule),
+    forwardRef(() => ChatModule),
   ],
   controllers: [ChallengeController],
   providers: [ChallengeService],

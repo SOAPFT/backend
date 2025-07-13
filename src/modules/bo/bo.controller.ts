@@ -5,9 +5,26 @@ import {
   Param,
   DefaultValuePipe,
   ParseIntPipe,
+  Put,
+  Delete,
+  Body,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { BoService } from './bo.service';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
+import { UpdateCommentDto } from './dto/update-comment.dto';
+import { UpdateChallengeDto } from './dto/update-challenge.dto';
+import {
+  ApiUpdateUser,
+  ApiDeleteUser,
+  ApiUpdatePost,
+  ApiDeletePost,
+  ApiUpdateComment,
+  ApiDeleteComment,
+  ApiUpdateChallenge,
+  ApiDeleteChallenge,
+} from './decorators/bo.swagger';
 
 @ApiTags('BO (Back Office)')
 @Controller('bo')
@@ -210,5 +227,69 @@ export class BoController {
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
     return this.boService.getFriendships(page, limit);
+  }
+
+  // === 사용자 수정/삭제 ===
+  @Put('users/:userUuid')
+  @ApiUpdateUser()
+  async updateUser(
+    @Param('userUuid') userUuid: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    return this.boService.updateUser(userUuid, updateUserDto);
+  }
+
+  @Delete('users/:userUuid')
+  @ApiDeleteUser()
+  async deleteUser(@Param('userUuid') userUuid: string) {
+    return this.boService.deleteUser(userUuid);
+  }
+
+  // === 게시글 수정/삭제 ===
+  @Put('posts/:postUuid')
+  @ApiUpdatePost()
+  async updatePost(
+    @Param('postUuid') postUuid: string,
+    @Body() updatePostDto: UpdatePostDto,
+  ) {
+    return this.boService.updatePost(postUuid, updatePostDto);
+  }
+
+  @Delete('posts/:postUuid')
+  @ApiDeletePost()
+  async deletePost(@Param('postUuid') postUuid: string) {
+    return this.boService.deletePost(postUuid);
+  }
+
+  // === 댓글 수정/삭제 ===
+  @Put('comments/:commentId')
+  @ApiUpdateComment()
+  async updateComment(
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Body() updateCommentDto: UpdateCommentDto,
+  ) {
+    return this.boService.updateComment(commentId, updateCommentDto);
+  }
+
+  @Delete('comments/:commentId')
+  @ApiDeleteComment()
+  async deleteComment(@Param('commentId', ParseIntPipe) commentId: number) {
+    return this.boService.deleteComment(commentId);
+  }
+
+  // === 챌린지 수정/삭제 ===
+  @Put('challenges/:challengeUuid')
+  @ApiUpdateChallenge()
+  async updateChallenge(
+    @Param('challengeUuid') challengeUuid: string,
+    @Body() updateChallengeDto: UpdateChallengeDto,
+  ) {
+    return this.boService.updateChallenge(challengeUuid, updateChallengeDto);
+  }
+
+  @Delete('challenges/:challengeUuid')
+  @ApiDeleteChallenge()
+  async deleteChallenge(@Param('challengeUuid') challengeUuid: string) {
+    return this.boService.deleteChallenge(challengeUuid);
   }
 }

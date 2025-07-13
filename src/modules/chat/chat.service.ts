@@ -378,6 +378,94 @@ export class ChatService {
   }
 
   /**
+   * 챌린지 채팅방에 참여자 추가
+   */
+  async addParticipantToChallengeRoom(challengeUuid: string, userUuid: string) {
+    const chatRoom = await this.chatRoomRepository.findOne({
+      where: { challengeUuid, isActive: true },
+    });
+
+    if (!chatRoom) {
+      throw new NotFoundException('챌린지 채팅방을 찾을 수 없습니다.');
+    }
+
+    if (chatRoom.participantUuids.includes(userUuid)) {
+      this.logger.warn('이미 채팅방에 참여한 사용자입니다.', {
+        challengeUuid,
+        userUuid,
+      });
+      return;
+    }
+
+    chatRoom.participantUuids.push(userUuid);
+    await this.chatRoomRepository.save(chatRoom);
+
+    // 참여 시스템 메시지 추가
+    const user = await this.userRepository.findOne({ where: { userUuid } });
+    const systemMessage = this.chatMessageRepository.create({
+      roomUuid: chatRoom.roomUuid,
+      senderUuid: 'system',
+      type: MessageType.SYSTEM,
+      content: `${user?.nickname || '사용자'}님이 채팅방에 참여했습니다.`,
+      isRead: false,
+      readByUuids: [],
+    });
+
+    await this.chatMessageRepository.save(systemMessage);
+    this.logger.info('챌린지 채팅방 참여자 추가 완료', {
+      challengeUuid,
+      userUuid,
+    });
+  }
+
+  /**
+   * 챌린지 채팅방에서 참여자 제거
+   */
+  async removeParticipantFromChallengeRoom(
+    challengeUuid: string,
+    userUuid: string,
+  ) {
+    const chatRoom = await this.chatRoomRepository.findOne({
+      where: { challengeUuid, isActive: true },
+    });
+
+    if (!chatRoom) {
+      throw new NotFoundException('챌린지 채팅방을 찾을 수 없습니다.');
+    }
+
+    if (!chatRoom.participantUuids.includes(userUuid)) {
+      this.logger.warn('채팅방에 참여하지 않은 사용자입니다.', {
+        challengeUuid,
+        userUuid,
+      });
+      return;
+    }
+
+    chatRoom.participantUuids = chatRoom.participantUuids.filter(
+      (uuid) => uuid !== userUuid,
+    );
+
+    await this.chatRoomRepository.save(chatRoom);
+
+    // 나가기 시스템 메시지 추가
+    const user = await this.userRepository.findOne({ where: { userUuid } });
+    const systemMessage = this.chatMessageRepository.create({
+      roomUuid: chatRoom.roomUuid,
+      senderUuid: 'system',
+      type: MessageType.SYSTEM,
+      content: `${user?.nickname || '사용자'}님이 채팅방을 나갔습니다.`,
+      isRead: false,
+      readByUuids: [],
+    });
+
+    await this.chatMessageRepository.save(systemMessage);
+    this.logger.info('챌린지 채팅방 참여자 제거 완료', {
+      challengeUuid,
+      userUuid,
+    });
+  }
+
+  /**
    * 채팅방 응답 포맷팅
    */
   private async formatChatRoomResponse(

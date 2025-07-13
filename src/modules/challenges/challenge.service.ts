@@ -57,6 +57,13 @@ export class ChallengeService {
     const endDate = new Date(createChallengeDto.end_date);
     const user = await this.userRepository.findOne({ where: { userUuid } });
 
+    if (!user) {
+      CustomException.throw(
+        ErrorCode.USER_NOT_FOUND,
+        '사용자를 찾을 수 없습니다.',
+      );
+    }
+
     if (user.coins - createChallengeDto.coin_amount < 0) {
       CustomException.throw(
         ErrorCode.INSUFFICIENT_COINS,

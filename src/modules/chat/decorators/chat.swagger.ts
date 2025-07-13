@@ -582,10 +582,10 @@ export function ApiGetMessages() {
       example: 50,
     }),
     ApiQuery({
-      name: 'beforeMessageId',
+      name: 'lastMessageId',
       required: false,
-      description: '특정 메시지 이전의 메시지들을 조회',
-      example: 456,
+      description: '마지막 메시지 ID (이전 메시지 로드용)',
+      example: 1234,
     }),
     ApiResponse({
       status: 200,

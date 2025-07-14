@@ -1,5 +1,5 @@
 import { IsOptional, IsBoolean, IsEnum, IsNumber, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { NotificationType } from '@/types/notification.enum';
 
 export class GetNotificationsDto {
@@ -17,7 +17,11 @@ export class GetNotificationsDto {
 
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   unreadOnly?: boolean;
 
   @IsOptional()

@@ -490,6 +490,7 @@ export class ChallengeService {
    * 챌린지 탈퇴
    */
   async leaveChallenge(challengeUuid: string, userUuid: string) {
+    console.log(challengeUuid);
     const challenge = await this.challengeRepository.findOne({
       where: { challengeUuid },
     });
@@ -500,9 +501,8 @@ export class ChallengeService {
         '해당 아이디의 챌린지가 없습니다.',
       );
     }
-
-    const now = new Date();
-    if (challenge.startDate <= now) {
+    console.log(challenge);
+    if (challenge.isStarted) {
       CustomException.throw(
         ErrorCode.CHALLENGE_ALREADY_STARTED,
         '챌린지가 시작되어 나갈 수 없습니다.',
@@ -523,7 +523,12 @@ export class ChallengeService {
   /**
    * 챌린지 검색
    */
-  async searchChallenges(keyword: string, page: number, limit: number) {
+  async searchChallenges(
+    keyword: string,
+    page: number,
+    limit: number,
+    userUuid: string,
+  ) {
     const [results, total] = await this.challengeRepository.findAndCount({
       where: [
         { title: ILike(`%${keyword}%`) },
@@ -534,8 +539,13 @@ export class ChallengeService {
       order: { createdAt: 'DESC' },
     });
 
+    const data = results.map((challenge) => ({
+      ...challenge,
+      isParticipated: challenge.participantUuid.includes(userUuid),
+    }));
+
     return {
-      data: results,
+      data,
       meta: {
         total,
         page,

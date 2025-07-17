@@ -129,8 +129,14 @@ export class ChallengeController {
     @Query('keyword') keyword: string,
     @Query('page') page = 1,
     @Query('limit') limit = 10,
+    @UserUuid() userUuid: string,
   ) {
-    return this.challengeService.searchChallenges(keyword, page, limit);
+    return this.challengeService.searchChallenges(
+      keyword,
+      page,
+      limit,
+      userUuid,
+    );
   }
 
   /**
@@ -210,7 +216,7 @@ export class ChallengeController {
    * @param userUuid 현재 로그인한 사용자의 UUID
    * @returns 탈퇴 메시지
    */
-  @Delete(':challengeId/leave')
+  @Delete(':challengeUuid/leave')
   @ApiLeaveChallenge()
   leaveChallenge(
     @Param('challengeUuid') challengeUuid: string,

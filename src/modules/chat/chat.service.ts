@@ -39,6 +39,97 @@ export class ChatService {
   ) {}
 
   /**
+   * 1대1 채팅방 찾기 또는 생성
+   */
+  async findOrCreateDirectRoom(userUuid: string, targetUserUuid: string) {
+    // 자기 자신과의 채팅방 생성 방지
+    if (userUuid === targetUserUuid) {
+      throw new BadRequestException('자기 자신과는 채팅할 수 없습니다.');
+    }
+
+    // 대상 사용자 존재 확인
+    const targetUser = await this.userRepository.findOne({
+      where: { userUuid: targetUserUuid },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException('존재하지 않는 사용자입니다.');
+    }
+
+    // 친구 관계 확인
+    const friendship = await this.friendshipRepository.findOne({
+      where: [
+        {
+          requesterUuid: userUuid,
+          addresseeUuid: targetUserUuid,
+          status: FriendshipStatus.ACCEPTED,
+        },
+        {
+          requesterUuid: targetUserUuid,
+          addresseeUuid: userUuid,
+          status: FriendshipStatus.ACCEPTED,
+        },
+      ],
+    });
+
+    if (!friendship) {
+      throw new ForbiddenException(
+        '친구가 아닌 사용자와는 채팅할 수 없습니다.',
+      );
+    }
+
+    const participants = [userUuid, targetUserUuid].sort();
+
+    // 기존 1대1 채팅방 확인
+    const existingRoom = await this.chatRoomRepository
+      .createQueryBuilder('room')
+      .where('room.type = :type', { type: ChatRoomType.DIRECT })
+      .andWhere('room.participantUuids = :participantUuids', {
+        participantUuids: participants,
+      })
+      .andWhere('room.isActive = :isActive', { isActive: true })
+      .getOne();
+
+    if (existingRoom) {
+      // 기존 채팅방 반환
+      const roomResponse = await this.formatChatRoomResponse(
+        existingRoom,
+        userUuid,
+      );
+      return {
+        ...roomResponse,
+        isNewRoom: false,
+      };
+    }
+
+    // 새 채팅방 생성
+    const roomUuid = ulid();
+    const roomName = await this.generateRoomName(participants, userUuid);
+
+    const chatRoom = this.chatRoomRepository.create({
+      roomUuid,
+      type: ChatRoomType.DIRECT,
+      name: roomName,
+      participantUuids: participants,
+      challengeUuid: null,
+      isActive: true,
+    });
+
+    const savedRoom = await this.chatRoomRepository.save(chatRoom);
+    this.logger.info('1대1 채팅방 생성 완료', {
+      roomUuid,
+      userUuid,
+      targetUserUuid,
+    });
+
+    const roomResponse = await this.formatChatRoomResponse(savedRoom, userUuid);
+    return {
+      ...roomResponse,
+      isNewRoom: true,
+    };
+  }
+
+  /**
    * 채팅방 생성
    */
   async createChatRoom(userUuid: string, createChatRoomDto: CreateChatRoomDto) {

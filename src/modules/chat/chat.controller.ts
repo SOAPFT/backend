@@ -25,6 +25,7 @@ import {
   ApiGetMessages,
   ApiMarkMessagesAsRead,
   ApiLeaveChatRoom,
+  ApiFindOrCreateDirectRoom,
 } from './decorators/chat.swagger';
 
 @ApiTags('chat')
@@ -33,6 +34,18 @@ import {
 @UseGuards(JwtAuthGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
+
+  /**
+   * 1대1 채팅방 찾기 또는 생성
+   */
+  @Post('direct/:targetUserUuid')
+  @ApiFindOrCreateDirectRoom()
+  async findOrCreateDirectRoom(
+    @Param('targetUserUuid') targetUserUuid: string,
+    @UserUuid() userUuid: string,
+  ) {
+    return this.chatService.findOrCreateDirectRoom(userUuid, targetUserUuid);
+  }
 
   /**
    * 채팅방 생성

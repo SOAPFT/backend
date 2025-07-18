@@ -13,6 +13,104 @@ import {
   CommonErrorResponses,
 } from '../../../decorators/swagger.decorator';
 
+export function ApiFindOrCreateDirectRoom() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '1대1 채팅방 찾기 또는 생성',
+      description:
+        '대상 사용자와의 1대1 채팅방이 존재하면 해당 채팅방을 반환하고, 없으면 새로 생성합니다. 친구 관계인 경우에만 생성 가능합니다.',
+    }),
+    ApiBearerAuth(),
+    ApiParam({
+      name: 'targetUserUuid',
+      description: '대상 사용자 UUID',
+      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '1대1 채팅방 조회/생성 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          roomUuid: {
+            type: 'string',
+            example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+          },
+          type: {
+            type: 'string',
+            enum: ['DIRECT'],
+            example: 'DIRECT',
+          },
+          name: {
+            type: 'string',
+            example: '운동러버',
+          },
+          participants: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                userUuid: {
+                  type: 'string',
+                  example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+                },
+                nickname: { type: 'string', example: '운동러버' },
+                profileImage: {
+                  type: 'string',
+                  example: 'https://example.com/profile.jpg',
+                },
+              },
+            },
+          },
+          challengeUuid: {
+            type: 'string',
+            example: null,
+          },
+          lastMessage: {
+            type: 'object',
+            example: null,
+          },
+          lastMessageAt: {
+            type: 'string',
+            format: 'date-time',
+            example: null,
+          },
+          unreadCount: {
+            type: 'number',
+            example: 0,
+          },
+          isNewRoom: {
+            type: 'boolean',
+            example: true,
+            description: '새로 생성된 채팅방인지 여부',
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2025-06-22T12:00:00Z',
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 400,
+      description: '잘못된 요청 (존재하지 않는 사용자 등)',
+    }),
+    ApiResponse({
+      status: 401,
+      description: '인증되지 않은 사용자',
+    }),
+    ApiResponse({
+      status: 403,
+      description: '친구가 아닌 사용자와는 채팅할 수 없습니다',
+    }),
+    ApiResponse({
+      status: 404,
+      description: '대상 사용자를 찾을 수 없습니다',
+    }),
+  );
+}
+
 export function ApiCreateChatRoom() {
   return applyDecorators(
     ApiOperation({

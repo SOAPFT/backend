@@ -13,6 +13,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFiles,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -154,8 +155,8 @@ export class PostsController {
   @ApiGetMyPosts()
   async getMyPosts(
     @UserUuid() userUuid: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
   ) {
     return await this.postsService.getPostsByUserUuid(
       userUuid,

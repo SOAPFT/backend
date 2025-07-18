@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
@@ -127,14 +128,14 @@ export class ChallengeController {
   @ApiSearchChallenges()
   async searchChallenges(
     @Query('keyword') keyword: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
     @UserUuid() userUuid: string,
   ) {
     return this.challengeService.searchChallenges(
       keyword,
-      page,
-      limit,
+      Number(page),
+      Number(limit),
       userUuid,
     );
   }

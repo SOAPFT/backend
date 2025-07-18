@@ -25,6 +25,17 @@ export class UsersService {
     private friendshipRepository: Repository<Friendship>,
   ) {}
 
+  /**
+   * 나이 계산 함수
+   * @param birthDate
+   * @returns
+   */
+  calculateAge(birthDate: Date | string): number {
+    const dateObj = birthDate instanceof Date ? birthDate : new Date(birthDate);
+    const today = new Date();
+    return today.getFullYear() - dateObj.getFullYear() + 1;
+  }
+
   findOneBySocialId(socialId: string) {
     return this.userRepository.findOneBy({ socialId });
   }
@@ -217,11 +228,14 @@ export class UsersService {
       ],
     });
 
+    const age = this.calculateAge(user.birthDate);
+
     return {
       userName: user.nickname,
       userImage: user.profileImage,
       userIntroduction: user.introduction,
       userUuid: user.userUuid,
+      userAge: age,
       coins: user.coins,
       postCount,
       friendCount,
@@ -285,11 +299,14 @@ export class UsersService {
       }
     }
 
+    const age = this.calculateAge(user.birthDate);
+
     return {
       userName: user.nickname,
       userImage: user.profileImage,
       userIntroduction: user.introduction,
       userUuid: user.userUuid,
+      userAge: age,
       postCount,
       friendCount,
       friendStatus,

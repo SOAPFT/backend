@@ -357,6 +357,7 @@ export class ChallengeService {
     }
 
     const userAge = calculateAge(user.birthDate);
+    console.log(userAge);
 
     if (!(challenge.startAge <= userAge && userAge <= challenge.endAge)) {
       CustomException.throw(

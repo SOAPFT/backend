@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ChallengeType, GenderType } from '@/types/challenge.enum';
 
 export class CreateChallengeDto {
@@ -13,6 +14,7 @@ export class CreateChallengeDto {
     example: ChallengeType.NORMAL,
   })
   @IsEnum(ChallengeType)
+  @Transform(({ value }) => value?.toUpperCase?.()) // 대소문자 대비
   type: ChallengeType;
 
   @ApiProperty({
@@ -48,10 +50,12 @@ export class CreateChallengeDto {
 
   @ApiProperty({ description: '주당 인증 목표 횟수', example: 5 })
   @IsNumber()
+  @Transform(({ value }) => Number(value))
   goal: number;
 
   @ApiProperty({ description: '참여 가능 최소 연령', example: 18 })
   @IsNumber()
+  @Transform(({ value }) => Number(value))
   start_age: number;
 
   @ApiProperty({
@@ -61,6 +65,7 @@ export class CreateChallengeDto {
   })
   @IsOptional()
   @IsNumber()
+  @Transform(({ value }) => Number(value))
   end_age?: number;
 
   @ApiProperty({
@@ -69,14 +74,17 @@ export class CreateChallengeDto {
     example: GenderType.NONE,
   })
   @IsEnum(GenderType)
+  @Transform(({ value }) => value?.toUpperCase?.())
   gender: GenderType;
 
   @ApiProperty({ description: '최대 참여자 수', example: 30 })
   @IsNumber()
+  @Transform(({ value }) => Number(value))
   max_member: number;
 
   @ApiProperty({ description: '참여 시 필요한 코인 양', example: 5 })
   @IsNumber()
+  @Transform(({ value }) => Number(value))
   coin_amount: number;
 
   @ApiProperty({

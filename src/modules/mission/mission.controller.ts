@@ -84,4 +84,14 @@ export class MissionController {
   async getMyMissions(@UserUuid() userUuid: string) {
     return this.missionService.findMyMissions(userUuid);
   }
+
+  // 참여 취소
+  @Delete(':id/participation')
+  @UseGuards(JwtAuthGuard)
+  async cancelParticipation(
+    @Param('id', ParseIntPipe) missionId: number,
+    @UserUuid() userUuid: string,
+  ) {
+    return this.missionService.cancelParticipation(userUuid, missionId);
+  }
 }

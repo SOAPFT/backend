@@ -167,4 +167,19 @@ export class MissionService {
         };
       });
   }
+
+  // 참여 취소
+  async cancelParticipation(userUuid: string, missionId: number) {
+    const participation = await this.participationRepo.findOne({
+      where: { userUuid, missionId },
+    });
+
+    if (!participation) {
+      throw new NotFoundException('참여 기록이 없습니다.');
+    }
+
+    await this.participationRepo.remove(participation);
+
+    return { message: '미션 참여가 취소되었습니다.' };
+  }
 }

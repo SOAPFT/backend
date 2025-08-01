@@ -27,11 +27,24 @@ export class AuthService {
     @InjectRepository(Auth) private readonly authRepository: Repository<Auth>,
     private readonly userService: UsersService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) {
+    // Apple의 공개키를 가져오기 위한 JWKS 클라이언트 초기화
+    this.jwksClient = new JwksClient({
+      jwksUri: 'https://appleid.apple.com/auth/keys',
+      cache: true,
+      cacheMaxAge: 86400000, // 24시간 캐시
+      cacheMaxEntries: 5,
+      timeout: 30000,
+      rateLimit: true,
+      jwksRequestsPerMinute: 5,
+    });
+  }
 
   private getRefreshTokenExpiryMs(): number {
     const expiresIn = process.env.JWT_REFRESH_TOKEN_EXPIRES_IN || '14d';
-    return typeof expiresIn === 'string' ? ms(expiresIn) : parseInt(expiresIn);
+    return typeof expiresIn === 'string'
+      ? (ms as any)(expiresIn)
+      : parseInt(expiresIn);
   }
 
   /**
@@ -257,13 +270,33 @@ export class AuthService {
     try {
       const identityToken = body.accessToken; // iOS에서 넘겨주는 Apple identity token
 
+      if (!identityToken) {
+        CustomException.throw(
+          ErrorCode.SOCIAL_LOGIN_FAILED,
+          'Apple identity token이 필요합니다.',
+        );
+      }
+
+      console.log('Apple Login - Identity Token received');
+
       // token의 header에서 kid 추출
       const header = decodeTokenHeader(identityToken);
       const kid = header.kid;
 
+      if (!kid) {
+        CustomException.throw(
+          ErrorCode.SOCIAL_LOGIN_FAILED,
+          'Invalid Apple identity token - missing kid',
+        );
+      }
+
+      console.log('Apple Login - Token header decoded, kid:', kid);
+
       // Apple 공개키 가져오기
       const key = await this.jwksClient.getSigningKey(kid);
       const publicKey = key.getPublicKey();
+
+      console.log('Apple Login - Public key retrieved');
 
       // 토큰 검증 및 파싱
       const payload = await this.jwtService.verifyAsync<JwtPayload>(
@@ -271,11 +304,26 @@ export class AuthService {
         {
           algorithms: ['RS256'],
           publicKey,
+          issuer: 'https://appleid.apple.com',
+          audience: process.env.APPLE_CLIENT_ID,
         },
       );
 
+      console.log('Apple Login - Token verified successfully');
+
       const appleUserId = payload.sub;
       const email = payload.email || '';
+
+      const isPrivateEmail =
+        payload.is_private_email === true ||
+        payload.is_private_email === 'true';
+
+      const realUserStatus = payload.real_user_status || 1;
+
+      console.log('Apple Login - User ID:', appleUserId);
+      console.log('Apple Login - Email:', email);
+      console.log('Apple Login - Is Private Email:', isPrivateEmail);
+      console.log('Apple Login - Real User Status:', realUserStatus);
 
       // starving-orange로 고유한 닉네임 생성
       const uniqueNickname = await this.generateUniqueNickname();
@@ -288,6 +336,12 @@ export class AuthService {
         socialProvider: SocialProvider.APPLE,
         pushToken: body.pushToken || null,
       };
+
+      console.log('Apple Login - User object created:', {
+        socialId: user.socialId,
+        socialNickname: user.socialNickname,
+        nickname: user.nickname,
+      });
 
       return this.handleSocialLogin(
         user,

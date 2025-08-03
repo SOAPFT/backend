@@ -526,7 +526,6 @@ export class ChallengeService {
    * 챌린지 탈퇴
    */
   async leaveChallenge(challengeUuid: string, userUuid: string) {
-    console.log(challengeUuid);
     const challenge = await this.challengeRepository.findOne({
       where: { challengeUuid },
     });
@@ -537,7 +536,7 @@ export class ChallengeService {
         '해당 아이디의 챌린지가 없습니다.',
       );
     }
-    console.log(challenge);
+
     if (challenge.isStarted) {
       CustomException.throw(
         ErrorCode.CHALLENGE_ALREADY_STARTED,
@@ -545,25 +544,46 @@ export class ChallengeService {
       );
     }
 
+    // 유저 정보 조회
+    const user = await this.userRepository.findOne({
+      where: { userUuid },
+    });
+
+    if (!user) {
+      CustomException.throw(
+        ErrorCode.USER_NOT_FOUND,
+        '해당 유저가 존재하지 않습니다.',
+      );
+    }
+
+    // 참여자 배열에서 제거
     challenge.participantUuid = challenge.participantUuid.filter(
-      (participantUuid) => participantUuid !== userUuid,
+      (uuid) => uuid !== userUuid,
     );
 
-    await this.challengeRepository.save(challenge);
+    // 코인 반환
+    user.coins += challenge.coinAmount;
 
-    // 챌린지 채팅방에서 자동 나가기
+    // DB 저장
+    await Promise.all([
+      this.challengeRepository.save(challenge),
+      this.userRepository.save(user),
+    ]);
+
+    // 채팅방 퇴장 처리
     try {
       await this.chatService.removeParticipantFromChallengeRoom(
         challengeUuid,
         userUuid,
       );
     } catch (error) {
-      // 채팅방 나가기 실패 시 로그만 남기고 계속 진행
       console.error('채팅방 나가기 실패:', error);
     }
 
     return {
-      message: '챌린지에서 성공적으로 탈퇴했습니다.',
+      message: '챌린지에서 성공적으로 탈퇴하고 코인이 반환되었습니다.',
+      refundedCoins: challenge.coinAmount,
+      currentCoin: user.coins,
     };
   }
 

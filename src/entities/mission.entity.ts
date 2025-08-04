@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 
-export type MissionType = 'distance' | 'steps' | 'heart';
+export type MissionType = 'distance' | 'steps' | 'calories';
 
 @Entity()
 export class Mission {
@@ -18,7 +18,7 @@ export class Mission {
   @Column('text')
   description: string;
 
-  @Column({ type: 'enum', enum: ['distance', 'steps', 'heart'] })
+  @Column({ type: 'enum', enum: ['distance', 'steps', 'calories'] })
   type: MissionType;
 
   @Column({ type: 'timestamp' })
@@ -32,6 +32,9 @@ export class Mission {
 
   @Column({ type: 'int', default: 0 })
   reward: number;
+
+  @Column({ type: 'boolean', default: false })
+  isLongTerm: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

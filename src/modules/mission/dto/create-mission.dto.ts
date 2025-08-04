@@ -4,9 +4,10 @@ import {
   IsDateString,
   IsOptional,
   IsInt,
+  IsBoolean,
 } from 'class-validator';
 
-export type MissionType = 'distance' | 'steps' | 'heart';
+export type MissionType = 'distance' | 'steps' | 'calories';
 
 export class CreateMissionDto {
   @IsString()
@@ -15,7 +16,7 @@ export class CreateMissionDto {
   @IsString()
   description: string;
 
-  @IsEnum(['distance', 'steps', 'heart'])
+  @IsEnum(['distance', 'steps', 'calories'])
   type: MissionType;
 
   @IsDateString()
@@ -31,4 +32,8 @@ export class CreateMissionDto {
   @IsOptional()
   @IsInt()
   reward?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isLongTerm?: boolean; // ✅ 추가
 }

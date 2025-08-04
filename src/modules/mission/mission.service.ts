@@ -60,6 +60,7 @@ export class MissionService {
     return this.participationRepo.save(participation);
   }
 
+  // 미션 상세 조회 (랭킹 포함)
   async getDetailWithRank(
     missionId: number,
     userUuid: string,
@@ -105,6 +106,7 @@ export class MissionService {
     };
   }
 
+  // 결과 제출
   async submitResult(
     missionId: number,
     userUuid: string,
@@ -119,8 +121,18 @@ export class MissionService {
       throw new NotFoundException('해당 미션에 참여한 기록이 없습니다.');
     }
 
+    // 미션 정보 가져오기 (단기 여부 판단용)
+    const mission = await this.missionRepo.findOneBy({ id: missionId });
+    if (!mission) {
+      throw new NotFoundException('미션을 찾을 수 없습니다.');
+    }
+
     participation.resultData = resultData;
-    // participation.completed = true; // 결과가 올라오면 완료 처리
+
+    // 단기 미션이면 완료 처리
+    if (!mission.isLongTerm) {
+      participation.completed = true;
+    }
 
     return this.participationRepo.save(participation);
   }
@@ -132,6 +144,7 @@ export class MissionService {
     });
   }
 
+  // 내 미션 조회
   async findMyMissions(userUuid: string) {
     const participations = await this.participationRepo.find({
       where: { userUuid },

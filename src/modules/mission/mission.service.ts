@@ -92,10 +92,10 @@ export class MissionService {
     });
 
     const ranked = allResults
-      .filter((p) => p.resultData?.distance != null)
+      .filter((p) => p.resultData != null)
       .map((p) => ({
         userUuid: p.userUuid,
-        result: p.resultData.distance,
+        result: p.resultData,
       }))
       .sort((a, b) => b.result - a.result);
 
@@ -120,7 +120,7 @@ export class MissionService {
   async submitResult(
     missionId: number,
     userUuid: string,
-    resultData: Record<string, any>,
+    resultData: number,
   ): Promise<MissionParticipation> {
     const participation = await this.participationRepo.findOneBy({
       missionId,

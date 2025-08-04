@@ -22,8 +22,8 @@ export class MissionParticipation {
   @Column({ default: false })
   completed: boolean;
 
-  @Column({ type: 'json', nullable: true })
-  resultData: Record<string, any>;
+  @Column({ nullable: true })
+  resultData: number;
 
   @CreateDateColumn()
   createdAt: Date;

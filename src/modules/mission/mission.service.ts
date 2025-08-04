@@ -149,8 +149,27 @@ export class MissionService {
 
   // 전체 미션 조회
   async findAll() {
-    return await this.missionRepo.find({
+    const now = new Date();
+
+    const missions = await this.missionRepo.find({
       order: { startTime: 'DESC' },
+    });
+
+    return missions.map((mission) => {
+      let status: 'UPCOMING' | 'ONGOING' | 'COMPLETED';
+
+      if (mission.startTime > now) {
+        status = 'UPCOMING';
+      } else if (mission.endTime < now) {
+        status = 'COMPLETED';
+      } else {
+        status = 'ONGOING';
+      }
+
+      return {
+        ...mission,
+        status,
+      };
     });
   }
 

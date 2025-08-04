@@ -20,6 +20,8 @@ import { ErrorCode } from '@/types/error-code.enum';
 import { MoreThan, LessThan, MoreThanOrEqual, Between, ILike } from 'typeorm';
 import { subDays } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { MissionParticipation } from '@/entities/mission-participation.entity';
+import { Mission } from '@/entities/mission.entity';
 
 /**
  * 나이 계산 함수
@@ -41,6 +43,10 @@ export class ChallengeService {
     private userRepository: Repository<User>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
+    @InjectRepository(MissionParticipation)
+    private missionParticipationRepo: Repository<MissionParticipation>,
+    @InjectRepository(Mission)
+    private missionRepository: Repository<Mission>,
     private chatService: ChatService,
   ) {}
 
@@ -234,23 +240,65 @@ export class ChallengeService {
    * 사용자가 참여한 챌린지 조회
    */
   async findUserChallenges(userUuid: string, status: ChallengeFilterType) {
-    const qb = await this.challengeRepository
+    const now = new Date();
+
+    // 1. 참여한 Challenge 조회 (소셜 챌린지)
+    const challengeQb = this.challengeRepository
       .createQueryBuilder('challenge')
       .where(':userUuid = ANY(challenge.participantUuid)', { userUuid });
 
-    const now = new Date();
-
     if (status === ChallengeFilterType.ONGOING) {
-      qb.andWhere('challenge.startDate <= :now AND challenge.endDate >= :now', {
-        now,
-      });
+      challengeQb.andWhere(
+        'challenge.startDate <= :now AND challenge.endDate >= :now',
+        { now },
+      );
     } else if (status === ChallengeFilterType.UPCOMING) {
-      qb.andWhere('challenge.startDate > :now', { now });
+      challengeQb.andWhere('challenge.startDate > :now', { now });
     }
 
-    const challenges = await qb.getMany();
+    const challenges = await challengeQb.getMany();
 
-    return challenges;
+    // 2. 참여한 Mission 목록 조회
+    const missionParticipations = await this.missionParticipationRepo.find({
+      where: { userUuid },
+    });
+
+    const missionIds = missionParticipations.map((p) => p.missionId);
+    const missions = await this.missionRepository.findByIds(missionIds);
+
+    // 3. Mission 상태 필터링
+    const filteredMissions = missions.filter((m) => {
+      if (status === ChallengeFilterType.ONGOING) {
+        return m.startTime <= now && m.endTime >= now;
+      } else if (status === ChallengeFilterType.UPCOMING) {
+        return m.startTime > now;
+      }
+      return true;
+    });
+
+    // 4. 데이터 형식 맞춰주기
+    const formattedChallenges = challenges.map((c) => ({
+      ...c,
+      challengeType: 'GROUP', // 그룹 챌린지
+      sortKey: new Date(c.startDate).getTime(),
+    }));
+
+    const formattedMissions = filteredMissions.map((m) => ({
+      ...m,
+      challengeType: 'MISSION', // 미션 챌린지
+      sortKey: new Date(m.startTime).getTime(),
+    }));
+
+    const sorted = [...formattedChallenges, ...formattedMissions].sort(
+      (a, b) => a.sortKey - b.sortKey,
+    );
+
+    const finalResult = sorted.map((item) => {
+      const { ...rest } = item;
+      return rest;
+    });
+
+    return finalResult;
   }
 
   /**

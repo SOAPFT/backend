@@ -60,6 +60,7 @@ export class MissionService {
     return this.participationRepo.save(participation);
   }
 
+  // 미션 상세 조회 (랭킹 포함)
   async getDetailWithRank(
     missionId: number,
     userUuid: string,
@@ -72,22 +73,31 @@ export class MissionService {
       userUuid: string;
       result: number;
     }[];
+    status: 'UPCOMING' | 'ONGOING' | 'COMPLETED';
   }> {
     const mission = await this.missionRepo.findOneBy({ id: missionId });
     if (!mission) throw new NotFoundException('미션을 찾을 수 없습니다.');
+
+    const now = new Date();
+
+    let status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' = 'UPCOMING';
+    if (mission.startTime <= now && mission.endTime >= now) {
+      status = 'ONGOING';
+    } else if (mission.endTime < now) {
+      status = 'COMPLETED';
+    }
 
     const allResults = await this.participationRepo.find({
       where: { missionId },
     });
 
-    // 참여자 랭킹 계산 (distance가 있을 경우)
     const ranked = allResults
       .filter((p) => p.resultData?.distance != null)
       .map((p) => ({
         userUuid: p.userUuid,
         result: p.resultData.distance,
       }))
-      .sort((a, b) => b.result - a.result); // 높은 순으로 정렬
+      .sort((a, b) => b.result - a.result);
 
     const isParticipating = allResults.some((p) => p.userUuid === userUuid);
 
@@ -101,10 +111,12 @@ export class MissionService {
       isParticipating,
       myResult,
       myRank: myRankValue,
-      rankings: ranked.slice(0, 20), // 상위 10명만
+      rankings: ranked.slice(0, 20),
+      status,
     };
   }
 
+  // 결과 제출
   async submitResult(
     missionId: number,
     userUuid: string,
@@ -119,19 +131,49 @@ export class MissionService {
       throw new NotFoundException('해당 미션에 참여한 기록이 없습니다.');
     }
 
+    // 미션 정보 가져오기 (단기 여부 판단용)
+    const mission = await this.missionRepo.findOneBy({ id: missionId });
+    if (!mission) {
+      throw new NotFoundException('미션을 찾을 수 없습니다.');
+    }
+
     participation.resultData = resultData;
-    // participation.completed = true; // 결과가 올라오면 완료 처리
+
+    // 단기 미션이면 완료 처리
+    if (!mission.isLongTerm) {
+      participation.completed = true;
+    }
 
     return this.participationRepo.save(participation);
   }
 
   // 전체 미션 조회
   async findAll() {
-    return await this.missionRepo.find({
+    const now = new Date();
+
+    const missions = await this.missionRepo.find({
       order: { startTime: 'DESC' },
+    });
+
+    return missions.map((mission) => {
+      let status: 'UPCOMING' | 'ONGOING' | 'COMPLETED';
+
+      if (mission.startTime > now) {
+        status = 'UPCOMING';
+      } else if (mission.endTime < now) {
+        status = 'COMPLETED';
+      } else {
+        status = 'ONGOING';
+      }
+
+      return {
+        ...mission,
+        status,
+      };
     });
   }
 
+  // 내 미션 조회
   async findMyMissions(userUuid: string) {
     const participations = await this.participationRepo.find({
       where: { userUuid },

@@ -20,6 +20,8 @@ import { ErrorCode } from '@/types/error-code.enum';
 import { MoreThan, LessThan, MoreThanOrEqual, Between, ILike } from 'typeorm';
 import { subDays } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { MissionParticipation } from '@/entities/mission-participation.entity';
+import { Mission } from '@/entities/mission.entity';
 
 /**
  * 나이 계산 함수
@@ -41,6 +43,10 @@ export class ChallengeService {
     private userRepository: Repository<User>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
+    @InjectRepository(MissionParticipation)
+    private missionParticipationRepo: Repository<MissionParticipation>,
+    @InjectRepository(Mission)
+    private missionRepository: Repository<Mission>,
     private chatService: ChatService,
   ) {}
 
@@ -234,23 +240,65 @@ export class ChallengeService {
    * 사용자가 참여한 챌린지 조회
    */
   async findUserChallenges(userUuid: string, status: ChallengeFilterType) {
-    const qb = await this.challengeRepository
+    const now = new Date();
+
+    // 1. 참여한 Challenge 조회 (소셜 챌린지)
+    const challengeQb = this.challengeRepository
       .createQueryBuilder('challenge')
       .where(':userUuid = ANY(challenge.participantUuid)', { userUuid });
 
-    const now = new Date();
-
     if (status === ChallengeFilterType.ONGOING) {
-      qb.andWhere('challenge.startDate <= :now AND challenge.endDate >= :now', {
-        now,
-      });
+      challengeQb.andWhere(
+        'challenge.startDate <= :now AND challenge.endDate >= :now',
+        { now },
+      );
     } else if (status === ChallengeFilterType.UPCOMING) {
-      qb.andWhere('challenge.startDate > :now', { now });
+      challengeQb.andWhere('challenge.startDate > :now', { now });
     }
 
-    const challenges = await qb.getMany();
+    const challenges = await challengeQb.getMany();
 
-    return challenges;
+    // 2. 참여한 Mission 목록 조회
+    const missionParticipations = await this.missionParticipationRepo.find({
+      where: { userUuid },
+    });
+
+    const missionIds = missionParticipations.map((p) => p.missionId);
+    const missions = await this.missionRepository.findByIds(missionIds);
+
+    // 3. Mission 상태 필터링
+    const filteredMissions = missions.filter((m) => {
+      if (status === ChallengeFilterType.ONGOING) {
+        return m.startTime <= now && m.endTime >= now;
+      } else if (status === ChallengeFilterType.UPCOMING) {
+        return m.startTime > now;
+      }
+      return true;
+    });
+
+    // 4. 데이터 형식 맞춰주기
+    const formattedChallenges = challenges.map((c) => ({
+      ...c,
+      challengeType: 'GROUP', // 그룹 챌린지
+      sortKey: new Date(c.startDate).getTime(),
+    }));
+
+    const formattedMissions = filteredMissions.map((m) => ({
+      ...m,
+      challengeType: 'MISSION', // 미션 챌린지
+      sortKey: new Date(m.startTime).getTime(),
+    }));
+
+    const sorted = [...formattedChallenges, ...formattedMissions].sort(
+      (a, b) => a.sortKey - b.sortKey,
+    );
+
+    const finalResult = sorted.map((item) => {
+      const { ...rest } = item;
+      return rest;
+    });
+
+    return finalResult;
   }
 
   /**
@@ -526,7 +574,6 @@ export class ChallengeService {
    * 챌린지 탈퇴
    */
   async leaveChallenge(challengeUuid: string, userUuid: string) {
-    console.log(challengeUuid);
     const challenge = await this.challengeRepository.findOne({
       where: { challengeUuid },
     });
@@ -537,7 +584,7 @@ export class ChallengeService {
         '해당 아이디의 챌린지가 없습니다.',
       );
     }
-    console.log(challenge);
+
     if (challenge.isStarted) {
       CustomException.throw(
         ErrorCode.CHALLENGE_ALREADY_STARTED,
@@ -545,25 +592,46 @@ export class ChallengeService {
       );
     }
 
+    // 유저 정보 조회
+    const user = await this.userRepository.findOne({
+      where: { userUuid },
+    });
+
+    if (!user) {
+      CustomException.throw(
+        ErrorCode.USER_NOT_FOUND,
+        '해당 유저가 존재하지 않습니다.',
+      );
+    }
+
+    // 참여자 배열에서 제거
     challenge.participantUuid = challenge.participantUuid.filter(
-      (participantUuid) => participantUuid !== userUuid,
+      (uuid) => uuid !== userUuid,
     );
 
-    await this.challengeRepository.save(challenge);
+    // 코인 반환
+    user.coins += challenge.coinAmount;
 
-    // 챌린지 채팅방에서 자동 나가기
+    // DB 저장
+    await Promise.all([
+      this.challengeRepository.save(challenge),
+      this.userRepository.save(user),
+    ]);
+
+    // 채팅방 퇴장 처리
     try {
       await this.chatService.removeParticipantFromChallengeRoom(
         challengeUuid,
         userUuid,
       );
     } catch (error) {
-      // 채팅방 나가기 실패 시 로그만 남기고 계속 진행
       console.error('채팅방 나가기 실패:', error);
     }
 
     return {
-      message: '챌린지에서 성공적으로 탈퇴했습니다.',
+      message: '챌린지에서 성공적으로 탈퇴하고 코인이 반환되었습니다.',
+      refundedCoins: challenge.coinAmount,
+      currentCoin: user.coins,
     };
   }
 
@@ -576,29 +644,63 @@ export class ChallengeService {
     limit: number,
     userUuid: string,
   ) {
-    const [results, total] = await this.challengeRepository.findAndCount({
+    // 1. 그룹 챌린지 검색
+    const groupResults = await this.challengeRepository.find({
       where: [
         { title: ILike(`%${keyword}%`) },
         { introduce: ILike(`%${keyword}%`) },
       ],
-      skip: (page - 1) * limit,
-      take: limit,
       order: { createdAt: 'DESC' },
     });
 
-    const data = results.map((challenge) => ({
+    const formattedChallenges = groupResults.map((challenge) => ({
       ...challenge,
+      challengeType: 'GROUP',
       isParticipated: challenge.participantUuid.includes(userUuid),
+      sortKey: new Date(challenge.startDate).getTime(),
     }));
 
+    // 2. 미션 검색
+    const allMissions = await this.missionRepository.find({
+      order: { createdAt: 'DESC' },
+    });
+
+    const missionParticipations = await this.missionParticipationRepo.find({
+      where: { userUuid },
+    });
+    const participatedMissionIds = missionParticipations.map(
+      (p) => p.missionId,
+    );
+
+    const matchedMissions = allMissions.filter(
+      (m) => m.title.includes(keyword) || m.description.includes(keyword),
+    );
+
+    const formattedMissions = matchedMissions.map((mission) => ({
+      ...mission,
+      challengeType: 'MISSION',
+      isParticipated: participatedMissionIds.includes(mission.id),
+      sortKey: new Date(mission.startTime).getTime(),
+    }));
+
+    // 3. 그룹 + 미션 병합 후 정렬
+    const merged = [...formattedChallenges, ...formattedMissions].sort(
+      (a, b) => b.sortKey - a.sortKey,
+    ); // 최신순 정렬
+
+    // 4. 페이지네이션 수동 적용
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginated = merged.slice(start, end);
+
     return {
-      data,
+      data: paginated.map(({ ...rest }) => rest),
       meta: {
-        total,
+        total: merged.length,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: page * limit < total,
+        totalPages: Math.ceil(merged.length / limit),
+        hasNextPage: end < merged.length,
       },
     };
   }

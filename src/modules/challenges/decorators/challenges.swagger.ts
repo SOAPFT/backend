@@ -448,70 +448,62 @@ export function ApiGetUserChallenges() {
   return applyDecorators(
     ApiOperation({
       summary: '사용자 참여 챌린지 조회',
-      description: '현재 로그인한 사용자가 참여 중인 모든 챌린지를 조회합니다.',
+      description:
+        '현재 로그인한 사용자가 참여 중인 챌린지 및 미션을 모두 조회합니다.',
     }),
     ApiBearerAuth(),
     ApiResponse({
       status: 200,
       description: '사용자 참여 챌린지 조회 성공',
       schema: {
-        type: 'object',
-        properties: {
-          success: {
-            type: 'boolean',
-            example: true,
-            description: '성공 여부',
-          },
-          data: {
-            type: 'array',
-            description: '참여 중인 챌린지 목록',
-            items: {
-              type: 'object',
-              properties: {
-                challengeId: {
-                  type: 'number',
-                  example: 1,
-                  description: '챌린지 ID',
-                },
-                challengeUuid: {
-                  type: 'string',
-                  example: '01HXX1X1X1X1X1X1X1X1X1X1X1',
-                  description: '챌린지 UUID',
-                },
-                title: {
-                  type: 'string',
-                  example: '30일 운동 챌린지',
-                  description: '챌린지 제목',
-                },
-                status: {
-                  type: 'string',
-                  enum: ['WAITING', 'IN_PROGRESS', 'COMPLETED'],
-                  example: 'IN_PROGRESS',
-                  description: '챌린지 상태',
-                },
-                currentMembers: {
-                  type: 'number',
-                  example: 5,
-                  description: '현재 참여자 수',
-                },
-                maxMembers: {
-                  type: 'number',
-                  example: 10,
-                  description: '최대 참여자 수',
-                },
-                startDate: {
-                  type: 'string',
-                  format: 'date',
-                  example: '2025-01-01',
-                  description: '챌린지 시작일',
-                },
-                endDate: {
-                  type: 'string',
-                  format: 'date',
-                  example: '2025-01-31',
-                  description: '챌린지 종료일',
-                },
-              },
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'number',
+              example: 1,
+              description: '챌린지 또는 미션의 ID',
+            },
+            title: {
+              type: 'string',
+              example: '30일 걷기 챌린지',
+              description: '제목',
+            },
+            description: {
+              type: 'string',
+              example: '매일 만 보 걷기!',
+              description: '설명',
+            },
+            type: {
+              type: 'string',
+              enum: ['distance', 'steps', 'calories'],
+              example: 'steps',
+              description: '챌린지/미션 유형',
+            },
+            startDate: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-08-01T00:00:00.000Z',
+              description: '시작 일시',
+            },
+            endDate: {
+              type: 'string',
+              format: 'date-time',
+              example: '2025-08-30T23:59:59.000Z',
+              description: '종료 일시',
+            },
+            reward: {
+              type: 'number',
+              example: 500,
+              description: '보상 포인트',
+            },
+            challengeType: {
+              type: 'string',
+              enum: ['GROUP', 'MISSION'],
+              example: 'GROUP',
+              description:
+                '챌린지 유형 (GROUP: 그룹 챌린지, MISSION: 개인 미션)',
             },
           },
         },

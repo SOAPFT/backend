@@ -73,22 +73,31 @@ export class MissionService {
       userUuid: string;
       result: number;
     }[];
+    status: 'UPCOMING' | 'ONGOING' | 'COMPLETED';
   }> {
     const mission = await this.missionRepo.findOneBy({ id: missionId });
     if (!mission) throw new NotFoundException('미션을 찾을 수 없습니다.');
+
+    const now = new Date();
+
+    let status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' = 'UPCOMING';
+    if (mission.startTime <= now && mission.endTime >= now) {
+      status = 'ONGOING';
+    } else if (mission.endTime < now) {
+      status = 'COMPLETED';
+    }
 
     const allResults = await this.participationRepo.find({
       where: { missionId },
     });
 
-    // 참여자 랭킹 계산 (distance가 있을 경우)
     const ranked = allResults
       .filter((p) => p.resultData?.distance != null)
       .map((p) => ({
         userUuid: p.userUuid,
         result: p.resultData.distance,
       }))
-      .sort((a, b) => b.result - a.result); // 높은 순으로 정렬
+      .sort((a, b) => b.result - a.result);
 
     const isParticipating = allResults.some((p) => p.userUuid === userUuid);
 
@@ -102,7 +111,8 @@ export class MissionService {
       isParticipating,
       myResult,
       myRank: myRankValue,
-      rankings: ranked.slice(0, 20), // 상위 10명만
+      rankings: ranked.slice(0, 20),
+      status,
     };
   }
 

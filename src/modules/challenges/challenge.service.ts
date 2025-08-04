@@ -644,29 +644,63 @@ export class ChallengeService {
     limit: number,
     userUuid: string,
   ) {
-    const [results, total] = await this.challengeRepository.findAndCount({
+    // 1. 그룹 챌린지 검색
+    const groupResults = await this.challengeRepository.find({
       where: [
         { title: ILike(`%${keyword}%`) },
         { introduce: ILike(`%${keyword}%`) },
       ],
-      skip: (page - 1) * limit,
-      take: limit,
       order: { createdAt: 'DESC' },
     });
 
-    const data = results.map((challenge) => ({
+    const formattedChallenges = groupResults.map((challenge) => ({
       ...challenge,
+      challengeType: 'GROUP',
       isParticipated: challenge.participantUuid.includes(userUuid),
+      sortKey: new Date(challenge.startDate).getTime(),
     }));
 
+    // 2. 미션 검색
+    const allMissions = await this.missionRepository.find({
+      order: { createdAt: 'DESC' },
+    });
+
+    const missionParticipations = await this.missionParticipationRepo.find({
+      where: { userUuid },
+    });
+    const participatedMissionIds = missionParticipations.map(
+      (p) => p.missionId,
+    );
+
+    const matchedMissions = allMissions.filter(
+      (m) => m.title.includes(keyword) || m.description.includes(keyword),
+    );
+
+    const formattedMissions = matchedMissions.map((mission) => ({
+      ...mission,
+      challengeType: 'MISSION',
+      isParticipated: participatedMissionIds.includes(mission.id),
+      sortKey: new Date(mission.startTime).getTime(),
+    }));
+
+    // 3. 그룹 + 미션 병합 후 정렬
+    const merged = [...formattedChallenges, ...formattedMissions].sort(
+      (a, b) => b.sortKey - a.sortKey,
+    ); // 최신순 정렬
+
+    // 4. 페이지네이션 수동 적용
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginated = merged.slice(start, end);
+
     return {
-      data,
+      data: paginated.map(({ ...rest }) => rest),
       meta: {
-        total,
+        total: merged.length,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: page * limit < total,
+        totalPages: Math.ceil(merged.length / limit),
+        hasNextPage: end < merged.length,
       },
     };
   }

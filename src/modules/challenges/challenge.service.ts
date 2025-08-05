@@ -298,7 +298,7 @@ export class ChallengeService {
         banner: null,
         maxMember: null,
         currentMember: null,
-        challengeType: 'MISSION',
+        challengeType: 'EVENT',
         sortKey: new Date(m.startTime).getTime(),
       };
     });
@@ -704,7 +704,7 @@ export class ChallengeService {
       banner: null,
       maxMember: null,
       currentMember: null,
-      challengeType: 'MISSION',
+      challengeType: 'EVENT',
       isParticipated: participatedMissionIds.includes(mission.id),
       sortKey: new Date(mission.startTime).getTime(),
     }));

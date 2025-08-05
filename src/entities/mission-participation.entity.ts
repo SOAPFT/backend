@@ -22,7 +22,7 @@ export class MissionParticipation {
   @Column({ default: false })
   completed: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'double precision', nullable: true })
   resultData: number;
 
   @CreateDateColumn()

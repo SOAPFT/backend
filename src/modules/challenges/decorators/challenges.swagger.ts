@@ -500,8 +500,32 @@ export function ApiGetUserChallenges() {
               example: 'GROUP',
               description: '챌린지 유형 (GROUP: 그룹 챌린지, EVENT: 개인 미션)',
             },
+            // 👇 요청하신 4개 필드 스키마 추가
+            startDate: {
+              type: 'string',
+              format: 'date-time',
+              description: '챌린지/미션 시작일',
+              example: '2025-08-01T00:00:00.000Z',
+            },
+            endDate: {
+              type: 'string',
+              format: 'date-time',
+              description: '챌린지/미션 종료일',
+              example: '2025-08-30T23:59:59.000Z',
+            },
+            isStarted: {
+              type: 'boolean',
+              description: '챌린지/미션 시작 여부',
+              example: true,
+            },
+            isFinished: {
+              type: 'boolean',
+              description: '챌린지/미션 종료 여부',
+              example: false,
+            },
           },
         },
+        // 👇 응답 예시(example)에도 추가된 필드 반영
         example: [
           {
             id: 1,
@@ -511,6 +535,10 @@ export function ApiGetUserChallenges() {
             maxMember: 30,
             currentMember: 15,
             challengeType: 'GROUP',
+            startDate: '2025-08-01T00:00:00.000Z',
+            endDate: '2025-08-30T23:59:59.000Z',
+            isStarted: true,
+            isFinished: false,
           },
           {
             id: 2,
@@ -520,6 +548,10 @@ export function ApiGetUserChallenges() {
             maxMember: null,
             currentMember: null,
             challengeType: 'EVENT',
+            startDate: '2025-09-01T00:00:00.000Z',
+            endDate: '2025-09-07T23:59:59.000Z',
+            isStarted: false,
+            isFinished: false,
           },
         ],
       },

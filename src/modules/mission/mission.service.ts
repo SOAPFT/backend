@@ -5,6 +5,7 @@ import { MissionParticipation } from '@/entities/mission-participation.entity';
 import { Repository, In } from 'typeorm';
 import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
+import { User } from '@/entities/user.entity';
 
 type MissionStatus = '진행예정' | '진행중' | '완료';
 
@@ -15,6 +16,8 @@ export class MissionService {
     private readonly missionRepo: Repository<Mission>,
     @InjectRepository(MissionParticipation)
     private readonly participationRepo: Repository<MissionParticipation>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   async create(dto: CreateMissionDto): Promise<Mission> {
@@ -69,8 +72,12 @@ export class MissionService {
     isParticipating: boolean;
     myResult: number | null;
     myRank: number | null;
+    myName: string | null;
+    myProfileImage: string | null;
     rankings: {
       userUuid: string;
+      name: string;
+      profileImage: string | null;
       result: number;
     }[];
     status: 'UPCOMING' | 'ONGOING' | 'COMPLETED';
@@ -79,7 +86,6 @@ export class MissionService {
     if (!mission) throw new NotFoundException('미션을 찾을 수 없습니다.');
 
     const now = new Date();
-
     let status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' = 'UPCOMING';
     if (mission.startTime <= now && mission.endTime >= now) {
       status = 'ONGOING';
@@ -91,26 +97,41 @@ export class MissionService {
       where: { missionId },
     });
 
+    const userUuids = allResults.map((p) => p.userUuid);
+    const users = await this.userRepo.findBy({ userUuid: In(userUuids) });
+
+    const userMap = new Map(
+      users.map((u) => [
+        u.userUuid,
+        { name: u.nickname, profileImage: u.profileImage },
+      ]),
+    );
+
     const ranked = allResults
       .filter((p) => p.resultData != null)
       .map((p) => ({
         userUuid: p.userUuid,
+        name: userMap.get(p.userUuid)?.name || '알 수 없음',
+        profileImage: userMap.get(p.userUuid)?.profileImage || null,
         result: p.resultData,
       }))
       .sort((a, b) => b.result - a.result);
 
     const isParticipating = allResults.some((p) => p.userUuid === userUuid);
-
     const myResult =
       ranked.find((r) => r.userUuid === userUuid)?.result ?? null;
     const myRank = ranked.findIndex((r) => r.userUuid === userUuid);
     const myRankValue = myRank === -1 ? null : myRank + 1;
+    const myName = userMap.get(userUuid)?.name ?? null;
+    const myProfileImage = userMap.get(userUuid)?.profileImage ?? null;
 
     return {
       mission,
       isParticipating,
       myResult,
       myRank: myRankValue,
+      myName,
+      myProfileImage,
       rankings: ranked.slice(0, 20),
       status,
     };

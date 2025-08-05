@@ -88,13 +88,9 @@ export class MissionController {
   async submitResult(
     @Param('missionId', ParseIntPipe) missionId: number,
     @UserUuid() userUuid: string,
-    @Body() body: { resultData: Record<string, any> },
+    @Body('resultData') resultData: number,
   ) {
-    return this.missionService.submitResult(
-      missionId,
-      userUuid,
-      body.resultData,
-    );
+    return this.missionService.submitResult(missionId, userUuid, resultData);
   }
 
   // 전체 미션 조회

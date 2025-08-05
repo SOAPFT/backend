@@ -113,27 +113,28 @@ export function ApiParticipateMission() {
     ApiResponse({ status: 404, description: '미션 또는 사용자 정보 없음' }),
   );
 }
-
 export function ApiSubmitMissionResult() {
   return applyDecorators(
     ApiOperation({
       summary: '미션 결과 제출',
       description: '사용자가 완료한 미션 데이터를 제출합니다.',
     }),
-    ApiParam({ name: 'missionId', description: '미션 ID', example: 1 }),
+    ApiParam({
+      name: 'missionId',
+      description: '미션 ID',
+      example: 1,
+    }),
     ApiBody({
       schema: {
         type: 'object',
         properties: {
           resultData: {
-            type: 'object',
-            example: {
-              distance: 5300,
-              calories: 230,
-              duration: 1800,
-            },
+            type: 'number',
+            example: 120,
+            description: '제출한 미션 결과 값 (예: 걸음 수, 거리 등)',
           },
         },
+        required: ['resultData'],
       },
     }),
     ApiResponse({ status: 200, description: '제출 성공' }),

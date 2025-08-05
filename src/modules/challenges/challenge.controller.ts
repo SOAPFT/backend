@@ -108,13 +108,13 @@ export class ChallengeController {
 
   /**
    * 인기있는 챌린지 목록
-   * @returns 최근 생성된 챌린지 목록
+   * @returns 챌린지 목록
    */
 
   @Get('popular')
   @ApiGetPopularChallenges()
   getPopularChallenges() {
-    return this.challengeService.getRecentChallenges();
+    return this.challengeService.getPopularChallenges();
   }
 
   /**

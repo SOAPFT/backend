@@ -276,25 +276,41 @@ export class ChallengeService {
       return true;
     });
 
-    // 4. 데이터 형식 맞춰주기
+    // 4. 데이터 형식 맞춰주기 (Mission 참여자 수 조회 불필요)
+
+    // 5. 데이터 형식 맞춰주기
     const formattedChallenges = challenges.map((c) => ({
-      ...c,
-      challengeType: 'GROUP', // 그룹 챌린지
+      id: c.id,
+      challengeUuid: c.challengeUuid,
+      title: c.title,
+      banner: c.banner,
+      maxMember: c.maxMember,
+      currentMember: c.participantUuid.length,
+      challengeType: 'GROUP',
       sortKey: new Date(c.startDate).getTime(),
     }));
 
-    const formattedMissions = filteredMissions.map((m) => ({
-      ...m,
-      challengeType: 'MISSION', // 미션 챌린지
-      sortKey: new Date(m.startTime).getTime(),
-    }));
+    const formattedMissions = filteredMissions.map((m) => {
+      return {
+        id: m.id,
+        challengeUuid: null,
+        title: m.title,
+        banner: null,
+        maxMember: null,
+        currentMember: null,
+        challengeType: 'EVENT',
+        sortKey: new Date(m.startTime).getTime(),
+      };
+    });
 
     const sorted = [...formattedChallenges, ...formattedMissions].sort(
       (a, b) => a.sortKey - b.sortKey,
     );
 
+    // sortKey 제거하고 최종 결과 반환
     const finalResult = sorted.map((item) => {
-      const { ...rest } = item;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { sortKey, ...rest } = item;
       return rest;
     });
 
@@ -654,7 +670,12 @@ export class ChallengeService {
     });
 
     const formattedChallenges = groupResults.map((challenge) => ({
-      ...challenge,
+      id: challenge.id,
+      challengeUuid: challenge.challengeUuid,
+      title: challenge.title,
+      banner: challenge.banner,
+      maxMember: challenge.maxMember,
+      currentMember: challenge.participantUuid.length,
       challengeType: 'GROUP',
       isParticipated: challenge.participantUuid.includes(userUuid),
       sortKey: new Date(challenge.startDate).getTime(),
@@ -677,8 +698,13 @@ export class ChallengeService {
     );
 
     const formattedMissions = matchedMissions.map((mission) => ({
-      ...mission,
-      challengeType: 'MISSION',
+      id: mission.id,
+      challengeUuid: null,
+      title: mission.title,
+      banner: null,
+      maxMember: null,
+      currentMember: null,
+      challengeType: 'EVENT',
       isParticipated: participatedMissionIds.includes(mission.id),
       sortKey: new Date(mission.startTime).getTime(),
     }));
@@ -693,8 +719,12 @@ export class ChallengeService {
     const end = start + limit;
     const paginated = merged.slice(start, end);
 
+    // sortKey 제거하고 반환
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const finalData = paginated.map(({ sortKey, ...rest }) => rest);
+
     return {
-      data: paginated.map(({ ...rest }) => rest),
+      data: finalData,
       meta: {
         total: merged.length,
         page,

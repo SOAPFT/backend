@@ -288,6 +288,10 @@ export class ChallengeService {
       currentMember: c.participantUuid.length,
       challengeType: 'GROUP',
       sortKey: new Date(c.startDate).getTime(),
+      startDate: c.startDate,
+      endDate: c.endDate,
+      isStarted: new Date(c.startDate) <= now,
+      isFinished: new Date(c.endDate) < now,
     }));
 
     const formattedMissions = filteredMissions.map((m) => {
@@ -300,6 +304,10 @@ export class ChallengeService {
         currentMember: null,
         challengeType: 'EVENT',
         sortKey: new Date(m.startTime).getTime(),
+        startDate: m.startTime,
+        endDate: m.endTime,
+        isStarted: new Date(m.startTime) <= now,
+        isFinished: new Date(m.endTime) < now,
       };
     });
 

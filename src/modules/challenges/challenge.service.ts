@@ -676,6 +676,7 @@ export class ChallengeService {
       ],
       order: { createdAt: 'DESC' },
     });
+    const now = new Date();
 
     const formattedChallenges = groupResults.map((challenge) => ({
       id: challenge.id,
@@ -687,6 +688,10 @@ export class ChallengeService {
       challengeType: 'GROUP',
       isParticipated: challenge.participantUuid.includes(userUuid),
       sortKey: new Date(challenge.startDate).getTime(),
+      startDate: challenge.startDate,
+      endDate: challenge.endDate,
+      isStarted: new Date(challenge.startDate) <= now,
+      isFinished: challenge.endDate ? new Date(challenge.endDate) < now : false,
     }));
 
     // 2. 미션 검색
@@ -715,6 +720,10 @@ export class ChallengeService {
       challengeType: 'EVENT',
       isParticipated: participatedMissionIds.includes(mission.id),
       sortKey: new Date(mission.startTime).getTime(),
+      startDate: mission.startTime,
+      endDate: mission.endTime,
+      isStarted: new Date(mission.startTime) <= now,
+      isFinished: new Date(mission.endTime) < now,
     }));
 
     // 3. 그룹 + 미션 병합 후 정렬

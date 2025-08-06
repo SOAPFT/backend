@@ -684,7 +684,7 @@ export function ApiSearchChallenges() {
     }),
     ApiResponse({
       status: 200,
-      description: '검색된 챌린지 목록과 페이지 정보',
+      description: '검색된 챌린지/미션 목록과 페이지 정보',
       schema: {
         example: {
           data: [
@@ -697,6 +697,10 @@ export function ApiSearchChallenges() {
               currentMember: 15,
               challengeType: 'GROUP',
               isParticipated: true,
+              startDate: '2025-08-01T00:00:00.000Z',
+              endDate: '2025-08-31T23:59:59.000Z',
+              isStarted: true,
+              isFinished: false,
             },
             {
               id: 2,
@@ -707,6 +711,10 @@ export function ApiSearchChallenges() {
               currentMember: null,
               challengeType: 'EVENT',
               isParticipated: false,
+              startDate: '2025-08-10T00:00:00.000Z',
+              endDate: '2025-08-10T23:59:59.000Z',
+              isStarted: false,
+              isFinished: false,
             },
           ],
           meta: {
@@ -721,7 +729,6 @@ export function ApiSearchChallenges() {
     }),
   );
 }
-
 /**
  * 챌린지 달성률 API
  */

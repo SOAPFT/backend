@@ -411,7 +411,7 @@ export class ChallengeService {
     const challenges = await this.challengeRepository
       .createQueryBuilder('challenge')
       .addSelect('CARDINALITY(challenge.participantUuid)', 'participantCount')
-      .orderBy('participantCount', 'DESC')
+      .orderBy('CARDINALITY(challenge.participantUuid)', 'DESC')
       .limit(15)
       .getMany();
 

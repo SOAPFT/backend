@@ -22,6 +22,7 @@ import { FriendshipModule } from './modules/friendship/friendship.module';
 import { BoModule } from './modules/bo/bo.module';
 import { AiModule } from './modules/ai/ai.module';
 import { MissionModule } from './modules/mission/mission.module';
+import { PaymentModule } from './modules/payment/payment.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -50,6 +51,7 @@ import { MissionModule } from './modules/mission/mission.module';
     BoModule,
     AiModule,
     MissionModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

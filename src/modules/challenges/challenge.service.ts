@@ -422,26 +422,42 @@ export class ChallengeService {
    * 챌린지 참여
    */
   async joinChallenge(challengeUuid: string, userUuid: string) {
-    const challenge = await this.challengeRepository.findOne({
-      where: { challengeUuid },
-    });
-    const user = await this.userRepository.findOne({
-      where: {
-        userUuid,
-      },
-    });
+    // 1) 먼저 조회
+    const [challenge, user] = await Promise.all([
+      this.challengeRepository.findOne({ where: { challengeUuid } }),
+      this.userRepository.findOne({ where: { userUuid } }),
+    ]);
 
-    const now = new Date();
-    const startDate = new Date(challenge.startDate);
-    const endDate = new Date(challenge.endDate);
-
+    // 2) 널 가드
     if (!challenge) {
       CustomException.throw(
         ErrorCode.CHALLENGE_NOT_FOUND,
         '해당 아이디의 챌린지가 없습니다.',
       );
     }
+    if (!user) {
+      CustomException.throw(
+        ErrorCode.USER_NOT_FOUND,
+        '사용자 정보를 찾을 수 없습니다.',
+      );
+    }
 
+    // 3) 필드 유효성 가드
+    if (!challenge.startDate || !challenge.endDate) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_FOUND,
+        '챌린지 기간 정보가 없습니다.',
+      );
+    }
+    // participantUuid는 항상 배열 보장
+    challenge.participantUuid ??= [];
+
+    // 4) 이제 안전하게 날짜 계산
+    const now = new Date();
+    const startDate = new Date(challenge.startDate);
+    const endDate = new Date(challenge.endDate);
+
+    // 5) 조건 체크
     if (
       challenge.gender !== GenderType.NONE &&
       challenge.gender !== user.gender
@@ -452,71 +468,89 @@ export class ChallengeService {
       );
     }
 
-    const userAge = calculateAge(user.birthDate);
-    console.log(userAge);
-
-    if (!(challenge.startAge <= userAge && userAge <= challenge.endAge)) {
+    if (!user.birthDate) {
       CustomException.throw(
-        ErrorCode.AGE_RESTRICTION_NOT_MET,
-        '참여 가능한 연령 조건을 만족하지 않습니다.',
+        ErrorCode.USER_NOT_FOUND,
+        '사용자 생년월일 정보가 없습니다.',
       );
     }
+    const userAge = calculateAge(user.birthDate);
 
-    if (challenge.maxMember === challenge.participantUuid.length) {
+    // endAge가 null이면 startAge 이상만 체크
+    if (challenge.endAge == null) {
+      if (userAge < challenge.startAge) {
+        CustomException.throw(
+          ErrorCode.AGE_RESTRICTION_NOT_MET,
+          '참여 가능한 연령 조건을 만족하지 않습니다.',
+        );
+      }
+    } else {
+      if (!(challenge.startAge <= userAge && userAge <= challenge.endAge)) {
+        CustomException.throw(
+          ErrorCode.AGE_RESTRICTION_NOT_MET,
+          '참여 가능한 연령 조건을 만족하지 않습니다.',
+        );
+      }
+    }
+
+    if (
+      challenge.maxMember != null &&
+      challenge.participantUuid.length >= challenge.maxMember
+    ) {
       CustomException.throw(ErrorCode.CHALLENGE_FULL, '정원이 다 찼습니다.');
     }
 
-    const isAlreadyParticipant = challenge.participantUuid.find(
-      (uuid) => uuid === userUuid,
-    );
-
-    if (isAlreadyParticipant) {
+    if (challenge.participantUuid.includes(userUuid)) {
       CustomException.throw(
         ErrorCode.ALREADY_JOINED_CHALLENGE,
         '이미 참가한 챌린지 입니다.',
       );
     }
 
-    if (user.coins - challenge.coinAmount < 0) {
+    if (user.coins == null || challenge.coinAmount == null) {
+      CustomException.throw(
+        ErrorCode.COIN_TRANSACTION_FAILED,
+        '코인 정보가 올바르지 않습니다.',
+      );
+    }
+    if (user.coins < challenge.coinAmount) {
       CustomException.throw(
         ErrorCode.INSUFFICIENT_COINS,
-        '챌린지를 생성할 코인이 부족합니다.',
+        '챌린지에 참여할 코인이 부족합니다.',
       );
     }
 
-    if (endDate < now) {
+    if (endDate.getTime() < now.getTime()) {
       CustomException.throw(
         ErrorCode.CHALLENGE_ALREADY_FINISHED,
         '이미 종료된 챌린지 입니다.',
       );
-    } else if (startDate < now) {
+    }
+    // 이미 시작되었으면 막는 정책이면 <= 로
+    if (startDate.getTime() <= now.getTime()) {
       CustomException.throw(
         ErrorCode.CHALLENGE_ALREADY_STARTED,
         '이미 시작된 챌린지입니다.',
       );
     }
 
-    user.coins = user.coins - challenge.coinAmount;
+    // 6) 상태 변경 (동시성 고려: 실제 운영이면 트랜잭션+락 권장)
+    user.coins -= challenge.coinAmount;
     challenge.participantUuid.push(userUuid);
 
     await this.challengeRepository.save(challenge);
     await this.userRepository.save(user);
 
-    // 챌린지 채팅방에 자동 참여
     try {
       await this.chatService.addParticipantToChallengeRoom(
         challengeUuid,
         userUuid,
       );
     } catch (error) {
-      // 채팅방 참여 실패 시 로그만 남기고 계속 진행
       console.error('채팅방 참여 실패:', error);
     }
 
-    return {
-      message: '참가 완료',
-      challengeUuid,
-    };
+    return { message: '참가 완료', challengeUuid };
   }
 
   /**

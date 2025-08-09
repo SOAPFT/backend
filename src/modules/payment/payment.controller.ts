@@ -27,13 +27,9 @@ export class PaymentController {
   @UseGuards(JwtAuthGuard)
   @ApiPostWithdraw()
   async withdraw(
-    @Body() body: { amount: number; accountNumber: string },
+    @Body() body: { amount: number },
     @UserUuid() userUuid: string,
   ) {
-    return this.paymentService.withdrawCoins(
-      userUuid,
-      body.amount,
-      body.accountNumber,
-    );
+    return this.paymentService.withdrawCoins(userUuid, body.amount);
   }
 }

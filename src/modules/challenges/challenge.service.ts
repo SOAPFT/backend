@@ -600,13 +600,17 @@ export class ChallengeService {
     );
 
     const progress = [];
-    let achievedWeeks = 0;
+    // ⭐ 1. 달성한 주의 수가 아닌, 총 달성 횟수를 계산하기 위한 변수
+    let totalActualProgressCount = 0;
 
     for (let i = 1; i <= totalWeeks; i++) {
       const count = weekMap[i] ? weekMap[i].size : 0;
       const achieved = count >= goal;
 
-      if (achieved) achievedWeeks++;
+      // ⭐ 2. 주차별 달성 횟수가 목표치를 넘지 않도록 조정하여 누적
+      // (예: 주 3회 목표인데 5번 했어도 3번으로 인정)
+      const weeklyContribution = Math.min(count, goal);
+      totalActualProgressCount += weeklyContribution;
 
       progress.push({
         week: i,
@@ -615,7 +619,14 @@ export class ChallengeService {
       });
     }
 
-    const totalAchievementRate = Math.round((achievedWeeks / totalWeeks) * 100);
+    // ⭐ 3. 전체 챌린지 기간 동안의 총 목표 횟수 계산
+    const totalRequiredCount = goal * totalWeeks;
+
+    // ⭐ 4. 누적된 진행도를 기반으로 전체 달성률을 다시 계산
+    const totalAchievementRate =
+      totalRequiredCount > 0
+        ? Math.round((totalActualProgressCount / totalRequiredCount) * 100)
+        : 0;
 
     return {
       challengeInfo: {
@@ -624,6 +635,8 @@ export class ChallengeService {
         endDate,
         goal: challenge.goal,
       },
+      // 주차별 진행상황도 그대로 반환
+      progress,
       totalAchievementRate,
     };
   }

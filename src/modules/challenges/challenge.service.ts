@@ -567,97 +567,69 @@ export class ChallengeService {
   async getUserChallengeProgress(userUuid: string, challengeUuid: string) {
     const challenge = await this.challengeRepository.findOne({
       where: { challengeUuid },
-      // 필요한 컬럼만 쓰면 select로 좁혀도 됨
     });
 
     if (!challenge) {
-      // 네가 쓰는 커스텀 예외 그대로 유지하려면 아래 라인으로 교체
-      // CustomException.throw(ErrorCode.CHALLENGE_NOT_FOUND, '해당 아이디의 챌린지가 없습니다.');
       throw new BadRequestException('해당 아이디의 챌린지가 없습니다.');
     }
 
     const { startDate, endDate, goal, participantUuid } = challenge;
 
-    // 종료일 포함 처리: endDate의 23:59:59.999까지 포함되게 +1ms 보정
+    // 종료일 포함 처리 (필요시 endOfDay로 보정)
     const endInclusive = new Date(endDate.getTime());
 
+    // 해당 기간 게시물 조회
     const posts = await this.postRepository.find({
       where: {
         userUuid,
         challengeUuid,
         createdAt: Between(startDate, endInclusive),
       },
+      select: ['createdAt'], // 최소 컬럼만
     });
 
     // 주차별: 같은 날 중복 제거(Set)
     const weekMap: Record<number, Set<string>> = {};
-
     for (const post of posts) {
       const diffMs = post.createdAt.getTime() - startDate.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      const weekNum = Math.floor(diffDays / 7) + 1; // 1주차부터 시작
-
-      const dateKey = formatDateLocal(post.createdAt); // 로컬 기준 날짜키
-
-      if (!weekMap[weekNum]) weekMap[weekNum] = new Set();
-      weekMap[weekNum].add(dateKey);
+      const weekNum = Math.floor(diffDays / 7) + 1; // 1주차부터
+      const dateKey = formatDateLocal(post.createdAt); // 하루 1회만 인정
+      (weekMap[weekNum] ??= new Set()).add(dateKey);
     }
 
-    // 전체 주차 수 (마지막이 부분 주여도 1주로 본다)
+    // 전체 주차 수 (부분 주 포함)
     const totalWeeks = Math.ceil(
       (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 7),
     );
 
-    // 가중치 계산
-    const weekWeight = totalWeeks > 0 ? 100 / totalWeeks : 0; // 예: 4주 → 25
-    const perActionWeight = goal > 0 ? weekWeight / goal : 0; // 예: 주5회 → 5
+    // 가중치
+    const weekWeight = totalWeeks > 0 ? 100 / totalWeeks : 0;
+    const perActionWeight = goal > 0 ? weekWeight / goal : 0;
 
-    const progress: Array<{
-      week: number;
-      count: number; // 그 주 인정된 일수
-      achieved: boolean; // 그 주 목표 달성 여부
-      weekWeight: number; // 그 주의 최대 퍼센트 (참고용)
-      appliedPercent: number; // 이번 주 반영 퍼센트 (목표 초과분 버림)
-    }> = [];
-
+    // 총 달성률 계산 (주 목표 초과분은 버림)
     let totalAchievementRate = 0;
-
     for (let i = 1; i <= totalWeeks; i++) {
-      const count = weekMap[i] ? weekMap[i].size : 0; // 하루 1회만 인정
-      const achieved = count >= goal;
-
-      // 주 목표 초과분은 버림해서 퍼센트 반영
-      const weeklyContribution = Math.min(count, goal);
-      const appliedPercent = weeklyContribution * perActionWeight;
-
-      totalAchievementRate += appliedPercent;
-
-      progress.push({
-        week: i,
-        count,
-        achieved,
-        weekWeight,
-        appliedPercent,
-      });
+      const count = weekMap[i]?.size ?? 0; // 그 주 인정 일수
+      const weeklyContribution = Math.min(count, goal); // 초과분 버림
+      totalAchievementRate += weeklyContribution * perActionWeight;
     }
-
-    // 소수 반올림 + 100% 상한
     totalAchievementRate = Math.min(100, Math.round(totalAchievementRate));
 
+    // 참가자 수 안전 계산
+    const participantCount = Array.isArray(participantUuid)
+      ? participantUuid.length
+      : 0;
+
+    // ✅ 요청한 형태로만 반환
     return {
       challengeInfo: {
-        participantCount: Array.isArray(participantUuid)
-          ? participantUuid.length
-          : 0, // 저장 형태에 맞게 조정
+        participantCount,
         startDate,
         endDate,
         goal,
-        totalWeeks,
-        weekWeight, // 주당 퍼센트 (참고)
-        perActionWeight, // 1회당 퍼센트 (참고)
       },
-      progress, // 주차별 상세
-      totalAchievementRate, // 전체 달성률 (%)
+      totalAchievementRate,
     };
   }
 

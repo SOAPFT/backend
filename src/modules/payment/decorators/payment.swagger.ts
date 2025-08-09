@@ -10,33 +10,29 @@ export function ApiPostWithdraw() {
   return applyDecorators(
     ApiBearerAuth(),
     ApiOperation({
-      summary: '출금 요청',
-      description: '계좌번호와 코인 수량을 입력하여 출금 요청을 보냅니다.',
+      summary: '코인 차감(기프티콘 변환)',
+      description:
+        '출금 계좌 입력 없이, 차감할 코인 수량(amount)만 전달합니다.',
     }),
     ApiBody({
       schema: {
         type: 'object',
         properties: {
-          accountNumber: {
-            type: 'string',
-            example: '110123456789',
-            description: '출금 대상 계좌번호',
-          },
           amount: {
             type: 'number',
             example: 5000,
-            description: '출금할 코인 수량',
+            description: '차감할 코인 수량',
           },
         },
-        required: ['accountNumber', 'amount'],
+        required: ['amount'],
       },
     }),
     ApiResponse({
       status: 201,
-      description: '출금 요청 성공',
+      description: '코인 차감 성공',
       schema: {
         example: {
-          message: '출금 요청 완료',
+          message: '기프티콘 변환이 완료되었습니다.',
         },
       },
     }),
@@ -46,7 +42,7 @@ export function ApiPostWithdraw() {
       schema: {
         example: {
           statusCode: 400,
-          message: '잔액 부족',
+          message: '보유 코인이 부족합니다.',
           error: 'Bad Request',
         },
       },

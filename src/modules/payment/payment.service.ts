@@ -37,22 +37,24 @@ export class PaymentService {
     return { message: '코인 지급 완료' };
   }
 
-  async withdrawCoins(userUuid: string, amount: number, accountNumber: string) {
+  async withdrawCoins(userUuid: string, amount: number) {
     const user = await this.userRepo.findOneBy({ userUuid });
     if (!user) throw new Error('사용자를 찾을 수 없습니다.');
-    if (user.coins < amount)
+    if (user.coins < amount) {
       throw new BadRequestException('보유 코인이 부족합니다.');
+    }
 
     user.coins -= amount;
     await this.userRepo.save(user);
 
+    // 기프티콘 변환 기록만 남기고 accountNumber 제거
     await this.withdrawalRepo.save({
       userUuid,
       amount,
-      accountNumber,
+      accountNumber: '123',
       status: 'PENDING',
     });
 
-    return { message: '출금 요청이 접수되었습니다.' };
+    return { message: '기프티콘 변환이 완료되었습니다.' };
   }
 }

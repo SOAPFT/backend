@@ -604,6 +604,7 @@ export class ChatService {
       lastMessageAt: chatRoom.lastMessageAt,
       unreadCount,
       createdAt: chatRoom.createdAt,
+      requesterUuid: currentUserUuid,
     };
   }
 

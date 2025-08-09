@@ -342,6 +342,11 @@ export function ApiGetChatRooms() {
                   format: 'date-time',
                   example: '2025-06-22T12:30:00Z',
                 },
+                requesterUuid: {
+                  type: 'string',
+                  description: '요청자(현재 사용자) UUID',
+                  example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+                },
               },
             },
           },

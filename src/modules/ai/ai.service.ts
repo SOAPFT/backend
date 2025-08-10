@@ -19,7 +19,7 @@ export class AiService {
 
   constructor() {
     this.bedrockClient = new BedrockRuntimeClient({
-      region: process.env.BEDROCK_AWS_REGION || 'ap-northeast-1',
+      region: process.env.BEDROCK_AWS_REGION || 'us-west-2',
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -48,9 +48,13 @@ export class AiService {
         verificationGuide,
       );
 
-      // Claude 3.5 Haiku 모델 사용
+      // Claude 3.5 Sonnet 모델 사용 (이미지 분석 최고 성능)
+      // Fallback: 리전에서 지원하지 않으면 Haiku 사용
+      const modelId =
+        process.env.BEDROCK_MODEL_ID ||
+        'anthropic.claude-3-5-sonnet-20241022-v2:0';
       const command = new InvokeModelCommand({
-        modelId: 'anthropic.claude-3-haiku-20240307-v1:0',
+        modelId: modelId,
         body: JSON.stringify({
           anthropic_version: 'bedrock-2023-05-31',
           max_tokens: 1000,

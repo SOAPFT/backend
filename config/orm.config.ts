@@ -10,7 +10,7 @@ config({ path: `env/.${nodeEnv}.env` });
 const isProd = process.env.NODE_ENV === 'production';
 const entityPath = isProd
   ? 'dist/src/entities/*.entity.js'
-  : 'dist/src/entities/*.entity.js';
+  : 'src/entities/*.entity.ts';
 const migrationPath = isProd
   ? 'dist/database/migrations/**/*.js'
   : 'database/migrations/**/*.js';

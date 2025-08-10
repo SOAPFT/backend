@@ -233,9 +233,7 @@ ${stepsText}
         isRelevant: Boolean(result.isRelevant),
         confidence: Math.max(0, Math.min(100, Number(result.confidence) || 0)),
         reasoning: String(result.reasoning || '분석 결과 없음'),
-        suggestedAction: ['approve', 'reject'].includes(
-          result.suggestedAction,
-        )
+        suggestedAction: ['approve', 'reject'].includes(result.suggestedAction)
           ? result.suggestedAction
           : 'reject',
       };
@@ -296,11 +294,11 @@ ${stepsText}
 
     const averageConfidence =
       results.reduce((sum, r) => sum + r.confidence, 0) / results.length;
-    
+
     const totalImages = results.length;
     const approvalRate = approvedCount / totalImages;
 
-    // 승인 기준: 
+    // 승인 기준:
     // - 단일 이미지: 승인되면 전체 승인
     // - 다중 이미지: 70% 이상 승인 + 평균 신뢰도 60 이상
     if (totalImages === 1) {
@@ -310,7 +308,7 @@ ${stepsText}
         details: results,
       };
     }
-    
+
     if (approvalRate >= 0.7 && averageConfidence >= 60) {
       return {
         overallResult: 'approved',

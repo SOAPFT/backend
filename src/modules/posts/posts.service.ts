@@ -156,7 +156,7 @@ export class PostsService {
                 isRelevant: false,
                 confidence: 0,
                 reasoning: `분석 실패: ${error.message}`,
-                suggestedAction: 'review' as const,
+                suggestedAction: 'reject' as const,
               },
               success: false,
               error: error.message,
@@ -200,14 +200,12 @@ export class PostsService {
           rejectedImages: analysisResults.filter(
             (r) => r.analysis.suggestedAction === 'reject',
           ).length,
-          reviewImages: analysisResults.filter(
-            (r) => r.analysis.suggestedAction === 'review',
-          ).length,
+          reviewImages: 0, // review 상태 제거
         },
         images: analysisResults.map((result) => ({
           imageUrl: result.imageUrl,
           originalName: result.originalName,
-          status: result.analysis.suggestedAction, // 'approve' | 'reject' | 'review'
+          status: result.analysis.suggestedAction, // 'approve' | 'reject'
           confidence: result.analysis.confidence,
           reasoning: result.analysis.reasoning,
           isRelevant: result.analysis.isRelevant,

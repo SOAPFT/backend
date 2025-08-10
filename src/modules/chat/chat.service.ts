@@ -688,4 +688,70 @@ export class ChatService {
 
     return users.map((user) => user.nickname).join(', ');
   }
+
+  /**
+   * 채팅방 입장
+   */
+  async joinChatRoom(userUuid: string, roomUuid: string) {
+    const chatRoom = await this.chatRoomRepository.findOne({
+      where: { roomUuid, isActive: true },
+    });
+
+    if (!chatRoom) {
+      throw new NotFoundException('존재하지 않는 채팅방입니다.');
+    }
+
+    // 이미 참여 중인지 확인
+    if (chatRoom.participantUuids.includes(userUuid)) {
+      // 이미 참여 중이어도 성공 응답 반환
+      const roomResponse = await this.formatChatRoomResponse(
+        chatRoom,
+        userUuid,
+      );
+      return {
+        success: true,
+        message: '이미 참여 중인 채팅방입니다.',
+        chatRoom: roomResponse,
+      };
+    }
+
+    // 1대1 채팅방은 입장 불가
+    if (chatRoom.type === ChatRoomType.DIRECT) {
+      throw new ForbiddenException(
+        '1대1 채팅방에는 추가로 입장할 수 없습니다.',
+      );
+    }
+
+    // 챌린지 채팅방인 경우 챌린지 참여 여부 확인
+    if (chatRoom.challengeUuid) {
+      // TODO: 챌린지 참여 여부 확인 로직
+      // 현재는 챌린지 참여 확인 없이 입장 허용
+    }
+
+    // 참여자 목록에 추가
+    chatRoom.participantUuids.push(userUuid);
+    await this.chatRoomRepository.save(chatRoom);
+
+    // 입장 시스템 메시지 추가
+    const user = await this.userRepository.findOne({ where: { userUuid } });
+    const systemMessage = this.chatMessageRepository.create({
+      roomUuid: chatRoom.roomUuid,
+      senderUuid: 'system',
+      type: MessageType.SYSTEM,
+      content: `${user?.nickname || '사용자'}님이 채팅방에 입장했습니다.`,
+      isRead: false,
+      readByUuids: [],
+    });
+
+    await this.chatMessageRepository.save(systemMessage);
+
+    this.logger.info('채팅방 입장 완료', { roomUuid, userUuid });
+
+    const roomResponse = await this.formatChatRoomResponse(chatRoom, userUuid);
+    return {
+      success: true,
+      message: '채팅방에 입장했습니다.',
+      chatRoom: roomResponse,
+    };
+  }
 }

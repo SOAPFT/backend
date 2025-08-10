@@ -103,37 +103,75 @@ export class AiService {
     challengeDescription?: string,
     verificationGuide?: string,
   ): string {
+    // 인증 가이드를 단계별로 파싱
+    const parseVerificationSteps = (guide: string): string[] => {
+      if (!guide) return [];
+      
+      // 숫자. 또는 Step 패턴으로 시작하는 라인들을 찾아서 분리
+      const steps = guide.split(/\n/).filter(line => 
+        /^\d+\.|^step\s+\d+/i.test(line.trim())
+      );
+      
+      if (steps.length === 0) {
+        // 패턴이 없으면 줄바꿈으로 분리
+        return guide.split(/\n/).filter(line => line.trim());
+      }
+      
+      return steps;
+    };
+
+    const verificationSteps = parseVerificationSteps(verificationGuide);
+    const stepsText = verificationSteps.length > 0 
+      ? verificationSteps.map((step, idx) => `  ${idx + 1}. ${step.replace(/^\d+\.|^step\s+\d+\.?/i, '').trim()}`).join('\n')
+      : verificationGuide || '가이드 없음';
+
     return `
-당신은 챌린지 인증 이미지를 분석하는 AI 전문가입니다. 사용자가 업로드한 이미지가 다음 챌린지와 관련이 있는지 판단해주세요.
+당신은 챌린지 인증 이미지를 매우 엄격하게 분석하는 AI 전문가입니다. 
+사용자가 업로드한 이미지가 챌린지의 인증 가이드를 정확히 따르고 있는지 단계별로 검증해주세요.
 
 **챌린지 정보:**
 - 제목: ${challengeTitle}
 - 설명: ${challengeDescription || '설명 없음'}
-- 인증 가이드: ${verificationGuide || '가이드 없음'}
 
-**분석 기준:**
-1. 이미지가 인증 가이드에 명시된 요구사항을 충족하는가? (가장 중요)
-2. 인증 가이드에 명시된 특정 요소들이 이미지에 포함되어 있는가?
-3. 이미지가 실제 활동을 보여주는가? (스크린샷, 가짜 이미지 등은 의심)
-4. 챌린지 제목과의 연관성도 고려하되, 인증 가이드를 우선으로 판단하세요.
+**인증 가이드 (반드시 모든 단계를 확인):**
+${stepsText}
 
-**중요 사항:**
-- 인증 가이드가 있다면 제목보다 인증 가이드의 요구사항을 더 중요하게 고려하세요.
-- 인증 가이드가 명확하지 않은 경우에만 제목과 설명을 참고하세요.
+**검증 절차:**
+1단계: 인증 가이드의 각 단계를 하나씩 체크
+  - 각 단계에서 요구하는 구체적인 요소가 이미지에 있는지 확인
+  - 예: "만보 인증샷"이라면 → 만보기 화면이나 운동 앱의 10,000보 표시가 명확히 보여야 함
+  - 예: "운동 인증"이라면 → 실제 운동하는 모습이나 운동 완료 증빙이 있어야 함
+
+2단계: 이미지의 관련성 판단
+  - 인증 가이드의 모든 요구사항을 충족하는가?
+  - 단순히 연관된 이미지가 아니라 가이드에서 요구하는 정확한 내용인가?
+  - 실제 활동을 증명하는 이미지인가? (조작되거나 무관한 이미지는 아닌가?)
+
+3단계: 신뢰도 점수 산정
+  - 90-100: 모든 인증 가이드 요구사항을 명확히 충족
+  - 70-89: 대부분의 요구사항 충족, 일부 불명확
+  - 50-69: 일부 요구사항만 충족
+  - 30-49: 관련성은 있으나 요구사항 미충족
+  - 0-29: 전혀 관련 없거나 가짜로 의심
+
+**중요 판단 원칙:**
+- 인증 가이드가 구체적일수록 엄격하게 판단
+- "만보 인증"이면 반드시 10,000보가 표시된 화면이 있어야 함
+- "운동 인증"이면 단순 헬스장 사진이 아닌 실제 운동 증빙이 필요
+- 제목과 유사해 보여도 가이드 요구사항을 충족하지 않으면 reject
 
 **응답 형식 (JSON):**
 {
   "isRelevant": true/false,
   "confidence": 0-100 (숫자),
-  "reasoning": "구체적인 판단 근거를 한글로 작성",
+  "reasoning": "각 인증 가이드 단계별로 충족 여부를 구체적으로 설명",
   "suggestedAction": "approve/reject/review"
 }
 
-**예시:**
-- 런닝 챌린지 (인증 가이드: GPS 앱 화면 포함): GPS 운동 기록 화면 + 운동복 → approve
-- 런닝 챌린지 (인증 가이드: 운동화 착용 모습): 운동화를 신고 있는 발 사진 → approve
-- 런닝 챌린지: 음식 사진, 실내 풍경, 관련 없는 셀피 → reject
-- 애매한 경우 (인증 가이드와 부분적으로만 일치) → review
+**판단 기준:**
+- approve: confidence >= 70 & 모든 필수 요구사항 충족
+- reject: confidence < 50 또는 핵심 요구사항 미충족
+- review: confidence 50-69 또는 판단이 애매한 경우
 
 이미지를 분석하고 reasoning 필드는 반드시 한글로 작성하여 JSON 형식으로만 응답해주세요.
     `;

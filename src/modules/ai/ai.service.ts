@@ -9,7 +9,7 @@ export interface ImageAnalysisResult {
   isRelevant: boolean;
   confidence: number;
   reasoning: string;
-  suggestedAction: 'approve' | 'reject' | 'review';
+  suggestedAction: 'approve' | 'reject';
 }
 
 @Injectable()
@@ -90,7 +90,7 @@ export class AiService {
         isRelevant: false,
         confidence: 0,
         reasoning: `이미지 분석 중 오류가 발생했습니다.: ${error.message}`,
-        suggestedAction: 'review',
+        suggestedAction: 'reject',
       };
     }
   }
@@ -178,30 +178,39 @@ ${stepsText}
   → ❌ 단순 책 표지나 독서 공간 사진
 
 **신뢰도 점수 기준:**
-- 90-100점: 모든 인증 가이드 요구사항을 직접적이고 명확하게 충족
-- 70-89점: 핵심 요구사항은 충족하나 일부 세부사항 불명확
-- 50-69점: 일부 요구사항만 충족, 핵심 증빙 불충분
-- 30-49점: 주제와 관련은 있으나 요구사항 대부분 미충족
-- 0-29점: 요구사항과 무관하거나 조작 의심
+- 80-100점: 모든 인증 가이드 요구사항을 명확하게 충족 → APPROVE
+- 60-79점: 핵심 요구사항은 충족하나 일부 불명확 → 엄격 판단하여 APPROVE/REJECT 결정
+- 40-59점: 일부 요구사항만 충족, 핵심 증빙 불충분 → REJECT
+- 0-39점: 요구사항 대부분 미충족 또는 무관 → REJECT
 
-**즉시 REJECT 기준:**
-✗ 인증 가이드에서 "보이도록" 요구한 핵심 요소가 보이지 않음
-✗ 수치/데이터를 요구했는데 해당 정보가 없음
-✗ 활동의 간접적 증거만 있고 직접적 증빙이 없음
-✗ 요구한 단계 중 하나라도 명확히 미충족
+**APPROVE 조건 (모두 충족해야 함):**
+✓ 인증 가이드의 모든 핵심 요구사항 충족
+✓ "보이도록", "표시" 등 요구한 요소가 명확히 식별 가능
+✓ 실제 활동을 직접적으로 증명하는 내용
+
+**REJECT 조건 (하나라도 해당되면):**
+✗ 인증 가이드 핵심 요구사항 중 하나라도 미충족
+✗ "보이도록" 요구한 요소가 보이지 않음  
+✗ 수치/데이터를 요구했는데 해당 정보 없음
+✗ 간접적 증거만 있고 직접적 증빙 없음
+✗ 관련 환경이나 도구만 보이고 실제 활동 증빙 없음
+
+**명확한 판단 원칙:**
+- 의심스럽거나 불확실하면 → REJECT
+- 요구사항을 "거의" 충족하면 → REJECT (거의는 미충족)
+- 관련은 있지만 정확하지 않으면 → REJECT
 
 **응답 형식 (JSON):**
 {
   "isRelevant": true/false,
   "confidence": 0-100 (숫자),
-  "reasoning": "인증 가이드 각 Step별로: [Step 1] 충족/미충족 - 이유, [Step 2] 충족/미충족 - 이유, [Step 3] 충족/미충족 - 이유. 특히 미충족 요소를 명확히 지적",
-  "suggestedAction": "approve/reject/review"
+  "reasoning": "인증 가이드 각 Step별로: [Step 1] 충족/미충족 - 구체적 이유, [Step 2] 충족/미충족 - 구체적 이유, [Step 3] 충족/미충족 - 구체적 이유. 미충족시 정확히 어떤 요소가 부족한지 명시",
+  "suggestedAction": "approve/reject"
 }
 
-**최종 판단:**
-- approve: confidence >= 70 & 모든 핵심 요구사항 직접적으로 충족
-- reject: confidence < 50 또는 핵심 요구사항 하나라도 미충족
-- review: confidence 50-69 또는 애매한 경우
+**최종 판단 (review 사용 금지):**
+- approve: 모든 핵심 요구사항을 명확히 충족하는 경우만
+- reject: 그 외 모든 경우 (애매하면 reject)
 
 이미지를 분석하고 reasoning 필드는 반드시 한글로 작성하여 JSON 형식으로만 응답해주세요.
     `;
@@ -224,11 +233,11 @@ ${stepsText}
         isRelevant: Boolean(result.isRelevant),
         confidence: Math.max(0, Math.min(100, Number(result.confidence) || 0)),
         reasoning: String(result.reasoning || '분석 결과 없음'),
-        suggestedAction: ['approve', 'reject', 'review'].includes(
+        suggestedAction: ['approve', 'reject'].includes(
           result.suggestedAction,
         )
           ? result.suggestedAction
-          : 'review',
+          : 'reject',
       };
     } catch (error) {
       this.logger.error('AI 분석 결과 파싱 오류:', error);
@@ -236,7 +245,7 @@ ${stepsText}
         isRelevant: false,
         confidence: 0,
         reasoning: '분석 결과를 파싱할 수 없습니다.',
-        suggestedAction: 'review',
+        suggestedAction: 'reject',
       };
     }
   }
@@ -266,13 +275,13 @@ ${stepsText}
    * 전체 분석 결과를 종합하여 최종 판단
    */
   getFinalVerificationResult(results: ImageAnalysisResult[]): {
-    overallResult: 'approved' | 'rejected' | 'pending_review';
+    overallResult: 'approved' | 'rejected';
     averageConfidence: number;
     details: ImageAnalysisResult[];
   } {
     if (results.length === 0) {
       return {
-        overallResult: 'pending_review',
+        overallResult: 'rejected',
         averageConfidence: 0,
         details: [],
       };
@@ -284,15 +293,25 @@ ${stepsText}
     const rejectedCount = results.filter(
       (r) => r.suggestedAction === 'reject',
     ).length;
-    const reviewCount = results.filter(
-      (r) => r.suggestedAction === 'review',
-    ).length;
 
     const averageConfidence =
       results.reduce((sum, r) => sum + r.confidence, 0) / results.length;
+    
+    const totalImages = results.length;
+    const approvalRate = approvedCount / totalImages;
 
-    // 모든 이미지가 승인되면 전체 승인
-    if (approvedCount === results.length && averageConfidence >= 70) {
+    // 승인 기준: 
+    // - 단일 이미지: 승인되면 전체 승인
+    // - 다중 이미지: 70% 이상 승인 + 평균 신뢰도 60 이상
+    if (totalImages === 1) {
+      return {
+        overallResult: approvedCount === 1 ? 'approved' : 'rejected',
+        averageConfidence,
+        details: results,
+      };
+    }
+    
+    if (approvalRate >= 0.7 && averageConfidence >= 60) {
       return {
         overallResult: 'approved',
         averageConfidence,
@@ -300,18 +319,8 @@ ${stepsText}
       };
     }
 
-    // 하나라도 명확히 거절되면 전체 거절
-    if (rejectedCount > 0 && averageConfidence < 30) {
-      return {
-        overallResult: 'rejected',
-        averageConfidence,
-        details: results,
-      };
-    }
-
-    // 그 외의 경우는 검토 필요
     return {
-      overallResult: 'pending_review',
+      overallResult: 'rejected',
       averageConfidence,
       details: results,
     };

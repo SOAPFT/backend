@@ -288,28 +288,12 @@ ${stepsText}
     const approvedCount = results.filter(
       (r) => r.suggestedAction === 'approve',
     ).length;
-    const rejectedCount = results.filter(
-      (r) => r.suggestedAction === 'reject',
-    ).length;
 
     const averageConfidence =
       results.reduce((sum, r) => sum + r.confidence, 0) / results.length;
 
-    const totalImages = results.length;
-    const approvalRate = approvedCount / totalImages;
-
-    // 승인 기준:
-    // - 단일 이미지: 승인되면 전체 승인
-    // - 다중 이미지: 70% 이상 승인 + 평균 신뢰도 60 이상
-    if (totalImages === 1) {
-      return {
-        overallResult: approvedCount === 1 ? 'approved' : 'rejected',
-        averageConfidence,
-        details: results,
-      };
-    }
-
-    if (approvalRate >= 0.7 && averageConfidence >= 60) {
+    // 엄격한 기준: 모든 이미지가 승인되어야만 전체 승인
+    if (approvedCount === results.length) {
       return {
         overallResult: 'approved',
         averageConfidence,
@@ -317,6 +301,7 @@ ${stepsText}
       };
     }
 
+    // 하나라도 거절되면 전체 거절
     return {
       overallResult: 'rejected',
       averageConfidence,

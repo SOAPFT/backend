@@ -419,6 +419,7 @@ export class ChallengeService {
     const challenges = await this.challengeRepository
       .createQueryBuilder('challenge')
       .addSelect('CARDINALITY(challenge.participantUuid)', 'participantCount')
+      .where("challenge.createdAt >= NOW() - INTERVAL '1 month'") // 최근 1개월 이내 생성
       .orderBy('CARDINALITY(challenge.participantUuid)', 'DESC')
       .limit(15)
       .getMany();

@@ -19,7 +19,7 @@ export class AiService {
 
   constructor() {
     this.bedrockClient = new BedrockRuntimeClient({
-      region: process.env.BEDROCK_AWS_REGION || 'us-west-2',
+      region: process.env.BEDROCK_AWS_REGION || 'ap-northeast-2',
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,

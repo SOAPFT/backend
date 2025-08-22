@@ -33,6 +33,14 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Create APNs certificate file
+        run: |
+          # APNs 인증서 디렉토리 생성
+          mkdir -p certs
+          
+          # APNs 인증서 파일 생성
+          echo "${{ secrets.APNS_AUTH_KEY }}" > certs/AuthKey_${{ secrets.APNS_KEY_ID }}.p8
+
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:

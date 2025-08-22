@@ -1,108 +1,103 @@
-name: Deploy to EC2
+name: Deploy to ECS
 
 on:
   push:
-    branches:
-      - main
+    branches: main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: soapft-dev
+  ECS_SERVICE: soapft-dev
+  ECS_CLUSTER: soapft-dev-cluster
+  CONTAINER_NAME: soapft-dev
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          node-version: '22'
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build
-        run: npm run build
-
-      - name: Prepare deployment files
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          mkdir -p deploy
-          cp -r dist deploy/
-          cp package.json deploy/
-          cp package-lock.json deploy/
+          # Docker 이미지 빌드 및 ECR Push
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-          # APNs 인증서 파일 생성
-          mkdir -p deploy/certs
-          echo "${{ secrets.APNS_AUTH_KEY }}" > deploy/certs/AuthKey_${{ secrets.APNS_KEY_ID }}.p8
+          # latest 태그 설정
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-          # 환경 변수 파일 생성
-          echo "${{ secrets.SERVER_ENV }}" > deploy/.env
-          echo "${{ secrets.SERVER_ENV }}" > deploy/.production.env
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-          tar -czf deploy.tar.gz deploy
-
-      - name: Configure SSH
+      - name: Download and update task definition
         run: |
-          mkdir -p ~/.ssh
-          echo "Host *
-            ServerAliveInterval 60
-            ServerAliveCountMax 30" > ~/.ssh/config
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          # Download current task definition
+          aws ecs describe-task-definition --task-definition ${{ env.ECS_SERVICE }}-v2 --query taskDefinition > task-definition.json
 
-      - name: Set up SSH Agent
-        uses: webfactory/ssh-agent@v0.7.0
+          # Create updated task definition with SERVER_ENV
+          cat > update-task-def.py << 'EOF'
+          import json
+          import os
+
+          # Read task definition
+          with open('task-definition.json', 'r') as f:
+              task_def = json.load(f)
+
+          # Parse SERVER_ENV into environment variables
+          env_vars = []
+          server_env = os.environ.get('SERVER_ENV', '')
+          for line in server_env.strip().split('\n'):
+              if '=' in line:
+                  key, value = line.split('=', 1)
+                  env_vars.append({'name': key.strip(), 'value': value.strip()})
+
+          # Update environment variables
+          task_def['containerDefinitions'][0]['environment'] = env_vars
+
+          # Remove unnecessary fields for new task definition
+          for field in ['taskDefinitionArn', 'revision', 'status', 'requiresAttributes', 'registeredAt', 'registeredBy', 'compatibilities']:
+              if field in task_def:
+                  del task_def[field]
+
+          # Write updated task definition
+          with open('task-definition.json', 'w') as f:
+              json.dump(task_def, f, indent=2)
+          EOF
+
+          SERVER_ENV="${{ secrets.SERVER_ENV }}" python3 update-task-def.py
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          ssh-private-key: ${{ secrets.SSH_KEY }}
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
 
-      - name: Transfer files to EC2
-        run: scp deploy.tar.gz ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USERNAME }}/
-
-      - name: Deploy application
-        run: |
-          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "
-            # 배포 디렉토리 생성
-            mkdir -p /home/${{ secrets.EC2_USERNAME }}/apps/backend
-            
-            # 압축 해제
-            tar -xzf deploy.tar.gz
-            
-            # 파일 복사
-            rm -rf /home/${{ secrets.EC2_USERNAME }}/apps/backend/dist
-            cp -r deploy/dist /home/${{ secrets.EC2_USERNAME }}/apps/backend/
-            cp -f deploy/package.json /home/${{ secrets.EC2_USERNAME }}/apps/backend/
-            cp -f deploy/package-lock.json /home/${{ secrets.EC2_USERNAME }}/apps/backend/
-            cp -f deploy/.env /home/${{ secrets.EC2_USERNAME }}/apps/backend/
-            
-            # APNs 인증서 파일 복사
-            mkdir -p /home/${{ secrets.EC2_USERNAME }}/apps/backend/certs
-            cp -r deploy/certs/* /home/${{ secrets.EC2_USERNAME }}/apps/backend/certs/
-            
-            # 환경 변수 파일 복사
-            mkdir -p /home/${{ secrets.EC2_USERNAME }}/apps/backend/env
-            cp -f deploy/.production.env /home/${{ secrets.EC2_USERNAME }}/apps/backend/env/.production.env
-            
-            # 패키지 설치
-            cd /home/${{ secrets.EC2_USERNAME }}/apps/backend
-            npm ci --production
-            
-            # PM2 서비스 재시작/시작
-            pm2 stop soapft-api || true
-            pm2 delete soapft-api || true
-            NODE_ENV=production pm2 start dist/src/main.js --name soapft-api
-            
-            # PM2 설정 저장
-            pm2 save
-            
-            # 임시 파일 정리 (보안을 위해 인증서 파일도 안전하게 삭제)
-            rm -rf /home/${{ secrets.EC2_USERNAME }}/deploy
-            rm /home/${{ secrets.EC2_USERNAME }}/deploy.tar.gz
-          "
-
-      - name: Verify deployment
-        run: |
-          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "
-            echo 'Checking application status...'
-            pm2 list
-            echo 'Deployment completed successfully!'
-          "
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

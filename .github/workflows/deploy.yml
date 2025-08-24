@@ -57,12 +57,14 @@ jobs:
 
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Download and update task definition
+      - name: Download current task definition
         run: |
           # Download current task definition
           aws ecs describe-task-definition --task-definition ${{ env.ECS_SERVICE }}-v2 --query taskDefinition > task-definition.json
 
-          # Create updated task definition with SERVER_ENV
+      - name: Update task definition environment variables
+        run: |
+          # Update task definition with SERVER_ENV while preserving Fargate settings
           cat > update-task-def.py << 'EOF'
           import json
           import os
@@ -79,20 +81,39 @@ jobs:
                   key, value = line.split('=', 1)
                   env_vars.append({'name': key.strip(), 'value': value.strip()})
 
-          # Update environment variables
-          task_def['containerDefinitions'][0]['environment'] = env_vars
+          # Update environment variables for the target container
+          container_name = os.environ.get('CONTAINER_NAME')
+          found_container = False
+          
+          for container in task_def.get('containerDefinitions', []):
+              if container.get('name') == container_name:
+                  if env_vars:
+                      container['environment'] = env_vars
+                  found_container = True
+                  break
+          
+          if not found_container:
+              raise SystemExit(f'Container {container_name} not found in task definition')
 
-          # Remove unnecessary fields for new task definition
-          for field in ['taskDefinitionArn', 'revision', 'status', 'requiresAttributes', 'registeredAt', 'registeredBy', 'compatibilities']:
+          # Remove only fields that prevent new task definition registration
+          # CRITICAL: Do NOT remove 'compatibilities' - it's required for Fargate
+          for field in ['taskDefinitionArn', 'revision', 'status', 'requiresAttributes', 'registeredAt', 'registeredBy']:
               if field in task_def:
                   del task_def[field]
+
+          # Ensure Fargate compatibility is preserved
+          if 'requiresCompatibilities' not in task_def:
+              task_def['requiresCompatibilities'] = ['FARGATE']
+          
+          if 'networkMode' not in task_def:
+              task_def['networkMode'] = 'awsvpc'
 
           # Write updated task definition
           with open('task-definition.json', 'w') as f:
               json.dump(task_def, f, indent=2)
           EOF
 
-          SERVER_ENV="${{ secrets.SERVER_ENV }}" python3 update-task-def.py
+          SERVER_ENV="${{ secrets.SERVER_ENV }}" CONTAINER_NAME="${{ env.CONTAINER_NAME }}" python3 update-task-def.py
 
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def

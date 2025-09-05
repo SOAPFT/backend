@@ -35,5 +35,5 @@ COPY --from=builder /app/certs ./certs
 # 7777 포트 노출
 EXPOSE 7777
 
-# 프로덕션 서버 실행 
-CMD ["npm", "run", "start:prod"]
+# 개발 서버 실행 
+CMD ["npm", "run", "start:dev"]

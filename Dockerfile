@@ -21,6 +21,9 @@ RUN npm ci && npm cache clean --force
 # 프로덕션 이미지 생성
 FROM node:22-alpine AS production
 
+# 헬스체크용 curl
+RUN apk add --no-cache curl
+
 WORKDIR /app
 
 # 빌드된 파일과 필요한 파일들 복사

@@ -36,5 +36,5 @@ COPY --from=builder /app/tsconfig*.json ./
 # 7777 포트 노출
 EXPOSE 7777
 
-# 개발 서버 실행 
-CMD ["npm", "run", "start:dev"]
+# 프로덕션 서버 실행 
+CMD ["npm", "run", "start:prod"]

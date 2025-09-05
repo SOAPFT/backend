@@ -91,6 +91,25 @@ export class PostsController {
   }
 
   /**
+   * 이미지 검증 상태 확인 (폴링용)
+   */
+  @Get('verification-status/:postUuid')
+  @ApiOperation({
+    summary: '이미지 검증 상태 확인',
+    description: `
+      비동기 이미지 검증의 진행 상태를 확인합니다.
+      - 검증 완료까지 폴링으로 호출
+      - 모든 이미지 검증 완료 시 게시글 생성 가능
+    `,
+  })
+  async checkVerificationStatus(
+    @Param('postUuid') postUuid: string,
+    @UserUuid() userUuid: string,
+  ) {
+    return this.postsService.checkVerificationStatus(postUuid, userUuid);
+  }
+
+  /**
    * AI 검증 완료된 이미지로 게시글 생성
    */
   @Post('create-verified')

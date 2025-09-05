@@ -21,12 +21,16 @@ RUN npm ci && npm cache clean --force
 # 프로덕션 이미지 생성
 FROM node:22-alpine AS production
 
+# 헬스체크용 curl
+RUN apk add --no-cache curl
+
 WORKDIR /app
 
 # 빌드된 파일과 필요한 파일들 복사
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/certs ./certs
 
 # 7777 포트 노출
 EXPOSE 7777

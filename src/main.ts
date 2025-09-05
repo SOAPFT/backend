@@ -2,7 +2,12 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 // 환경변수 파일이 존재할 때만 로드
-const envPath = path.join(__dirname, '..', 'env', `.${process.env.NODE_ENV || 'development'}.env`);
+const envPath = path.join(
+  __dirname,
+  '..',
+  'env',
+  `.${process.env.NODE_ENV || 'development'}.env`,
+);
 try {
   dotenv.config({ path: envPath });
 } catch (error) {

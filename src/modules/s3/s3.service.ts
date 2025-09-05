@@ -15,9 +15,11 @@ export class S3Service {
   @Inject('winston')
   private readonly logger: Logger;
   private readonly bucketName: string;
+  private readonly cdnDomain: string;
 
   constructor(private readonly configService: ConfigService) {
     this.bucketName = this.configService.get<string>('AWS_S3_BUCKET');
+    this.cdnDomain = this.configService.get<string>('AWS_CLOUDFRONT_DOMAIN') || 'd6md6o5keoxyr.cloudfront.net';
 
     this.s3 = new S3Client({
       credentials: {
@@ -42,13 +44,14 @@ export class S3Service {
           Key: `images/${fileName}`,
           Body: file.buffer,
           ContentType: file.mimetype,
-          ACL: 'public-read',
+          // ACL 제거 - CloudFront를 통해 public 접근
         },
       });
 
       const result = await upload.done();
-      const location = `https://${this.bucketName}.s3.amazonaws.com/images/${fileName}`;
-      this.logger.info('이미지 업로드 성공', { location });
+      // CDN URL 사용 (더 빠른 이미지 로딩)
+      const location = `https://${this.cdnDomain}/images/${fileName}`;
+      this.logger.info('이미지 업로드 성공', { location, s3Key: `images/${fileName}` });
       return location;
     } catch (error) {
       this.logger.error('이미지 업로드 실패', { error: error.message });

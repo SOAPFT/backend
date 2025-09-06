@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Mission } from '@/entities/mission.entity';
 import { MissionParticipation } from '@/entities/mission-participation.entity';
-import { Repository, In } from 'typeorm';
+import { Repository, In, MoreThan } from 'typeorm';
 import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { User } from '@/entities/user.entity';
@@ -168,21 +168,22 @@ export class MissionService {
     return this.participationRepo.save(participation);
   }
 
-  // 전체 미션 조회
+  // 진행 중 & 예정 미션 조회
   async findAll() {
     const now = new Date();
 
     const missions = await this.missionRepo.find({
-      order: { startTime: 'DESC' },
+      where: {
+        endTime: MoreThan(now),
+      },
+      order: { startTime: 'ASC' },
     });
 
     return missions.map((mission) => {
-      let status: 'UPCOMING' | 'ONGOING' | 'COMPLETED';
+      let status: 'UPCOMING' | 'ONGOING';
 
       if (mission.startTime > now) {
         status = 'UPCOMING';
-      } else if (mission.endTime < now) {
-        status = 'COMPLETED';
       } else {
         status = 'ONGOING';
       }

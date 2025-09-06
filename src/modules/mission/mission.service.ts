@@ -6,6 +6,8 @@ import { Repository, In, MoreThan } from 'typeorm';
 import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { User } from '@/entities/user.entity';
+import { CustomException } from '../../utils/custom-exception';
+import { ErrorCode } from '../../types/error-code.enum';
 
 type MissionStatus = '진행예정' | '진행중' | '완료';
 
@@ -156,6 +158,22 @@ export class MissionService {
     const mission = await this.missionRepo.findOneBy({ id: missionId });
     if (!mission) {
       throw new NotFoundException('미션을 찾을 수 없습니다.');
+    }
+
+    const now = new Date();
+
+    if (mission.startTime > now) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_STARTED,
+        '아직 미션이 시작되지 않았습니다.',
+      );
+    }
+
+    if (mission.endTime < now) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_ALREADY_FINISHED,
+        '챌린지가 이미 종료되었습니다.',
+      );
     }
 
     participation.resultData = resultData;

@@ -49,18 +49,20 @@ export class ApnsPushService implements OnModuleInit, OnModuleDestroy {
         this.configService.get<string>('NODE_ENV') === 'production';
 
       if (!keyPath || !keyId || !teamId) {
-        const errorMessage =
-          '필요한 환경변수: APNS_KEY_PATH, APNS_KEY_ID, APNS_TEAM_ID';
-        this.logger.error(errorMessage);
-        BusinessException.pushProviderConfigurationError(errorMessage);
+        const warningMessage =
+          'APNs 환경변수가 설정되지 않았습니다. 푸시 알림 기능이 비활성화됩니다. (APNS_KEY_PATH, APNS_KEY_ID, APNS_TEAM_ID)';
+        this.logger.warn(warningMessage);
+        this.isInitialized = false;
+        return;
       }
 
       // .p8 파일 경로 확인
       const fullKeyPath = path.resolve(keyPath);
       if (!fs.existsSync(fullKeyPath)) {
-        const errorMessage = `APNs 키 파일을 찾을 수 없습니다: ${fullKeyPath}`;
-        this.logger.error(errorMessage);
-        BusinessException.pushProviderConfigurationError(errorMessage);
+        const warningMessage = `APNs 키 파일을 찾을 수 없습니다: ${fullKeyPath}. 푸시 알림 기능이 비활성화됩니다.`;
+        this.logger.warn(warningMessage);
+        this.isInitialized = false;
+        return;
       }
 
       // APNs Provider 설정

@@ -342,6 +342,11 @@ export function ApiGetChatRooms() {
                   format: 'date-time',
                   example: '2025-06-22T12:30:00Z',
                 },
+                requesterUuid: {
+                  type: 'string',
+                  description: '요청자(현재 사용자) UUID',
+                  example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+                },
               },
             },
           },
@@ -889,6 +894,111 @@ export function ApiDeleteMessage() {
     ApiResponse({
       status: 404,
       description: '메시지를 찾을 수 없음',
+    }),
+  );
+}
+
+export function ApiJoinChatRoom() {
+  return applyDecorators(
+    ApiOperation({
+      summary: '채팅방 입장',
+      description: '채팅방에 입장합니다. roomUuid만 제공하면 됩니다.',
+    }),
+    ApiBearerAuth(),
+    ApiParam({
+      name: 'roomUuid',
+      description: '채팅방 UUID',
+      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+    }),
+    ApiResponse({
+      status: 200,
+      description: '채팅방 입장 성공',
+      schema: {
+        type: 'object',
+        properties: {
+          success: {
+            type: 'boolean',
+            example: true,
+          },
+          message: {
+            type: 'string',
+            example: '채팅방에 입장했습니다.',
+          },
+          chatRoom: {
+            type: 'object',
+            properties: {
+              roomUuid: {
+                type: 'string',
+                example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+              },
+              type: {
+                type: 'string',
+                enum: ['DIRECT', 'GROUP'],
+                example: 'GROUP',
+              },
+              name: {
+                type: 'string',
+                example: '30일 챌린지 채팅방',
+              },
+              participants: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    userUuid: {
+                      type: 'string',
+                      example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+                    },
+                    nickname: { type: 'string', example: '운동러버' },
+                    profileImage: {
+                      type: 'string',
+                      example: 'https://example.com/profile.jpg',
+                    },
+                  },
+                },
+              },
+              challengeUuid: {
+                type: 'string',
+                example: '01HZQK5J8X2M3N4P5Q6R7S8T9V',
+              },
+              lastMessage: {
+                type: 'object',
+                example: null,
+              },
+              lastMessageAt: {
+                type: 'string',
+                format: 'date-time',
+                example: '2025-06-22T12:00:00Z',
+              },
+              unreadCount: {
+                type: 'number',
+                example: 0,
+              },
+              createdAt: {
+                type: 'string',
+                format: 'date-time',
+                example: '2025-06-22T12:00:00Z',
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 400,
+      description: '이미 참여 중인 채팅방',
+    }),
+    ApiResponse({
+      status: 401,
+      description: '인증되지 않은 사용자',
+    }),
+    ApiResponse({
+      status: 403,
+      description: '채팅방 입장 권한 없음',
+    }),
+    ApiResponse({
+      status: 404,
+      description: '채팅방을 찾을 수 없음',
     }),
   );
 }

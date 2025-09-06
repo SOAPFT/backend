@@ -22,7 +22,6 @@ import { Challenge } from '@/entities/challenge.entity';
 import { UploadsService } from '../uploads/uploads.service';
 import { JwtService } from '@nestjs/jwt';
 import { S3Service } from '../s3/s3.service';
-import { SqsService } from '../sqs/sqs.service';
 import axios from 'axios';
 
 @Injectable()
@@ -51,7 +50,6 @@ export class PostsService {
     private userService: UsersService,
     private aiService: AiService,
     private s3Service: S3Service,
-    private sqsService: SqsService,
     private jwtService: JwtService,
   ) {}
 
@@ -118,63 +116,106 @@ export class PostsService {
         );
       }
 
-      // 4. 임시 Post UUID 생성
-      const postUuid = ulid();
+      // 4. 각 이미지에 대해 AI 분석 수행
+      const analysisResults = await Promise.all(
+        uploadResults.map(async (uploadResult, index) => {
+          try {
+            console.log(
+              `이미지 ${index + 1} AI 분석 시작: ${uploadResult.imageUrl}`,
+            );
 
-      // 5. image_verification 테이블에 레코드 생성하고 SQS에 메시지 전송
-      const verificationTasks = [];
-      const verificationRecords = [];
+            // 이미지 URL에서 Base64 변환
+            const imageBase64 = await this.imageUrlToBase64(
+              uploadResult.imageUrl,
+            );
 
-      for (const uploadResult of uploadResults) {
-        // image_verification 테이블에 초기 상태로 저장
-        const verification = this.imageVerificationRepository.create({
-          postUuid: postUuid,
-          imageUrl: uploadResult.imageUrl,
-          isRelevant: false,
-          confidence: 0,
-          reasoning: '검증 대기 중...',
-          suggestedAction: 'reject',
-          status: 'pending',
-        });
+            // AI 분석 수행
+            const analysisResult = await this.aiService.analyzeImageRelevance(
+              imageBase64,
+              challenge.title,
+              challenge.introduce,
+              challenge.verificationGuide,
+            );
 
-        const savedVerification = await this.imageVerificationRepository.save(verification);
-        verificationRecords.push(savedVerification);
+            console.log(
+              `이미지 ${index + 1} AI 분석 완료: ${analysisResult.suggestedAction} (신뢰도: ${analysisResult.confidence}%)`,
+            );
 
-        // SQS 메시지 준비
-        verificationTasks.push({
-          verificationId: savedVerification.id,
-          postUuid: postUuid,
-          imageUrl: uploadResult.imageUrl,
-          challengeTitle: challenge.title,
-          challengeDescription: challenge.introduce,
-          verificationGuide: challenge.verificationGuide,
-        });
-      }
+            return {
+              imageUrl: uploadResult.imageUrl,
+              originalName: uploadResult.originalName,
+              analysis: analysisResult,
+              success: true,
+            };
+          } catch (error) {
+            console.error(`이미지 ${index + 1} AI 분석 실패:`, error);
+            return {
+              imageUrl: uploadResult.imageUrl,
+              originalName: uploadResult.originalName,
+              analysis: {
+                isRelevant: false,
+                confidence: 0,
+                reasoning: `분석 실패: ${error.message}`,
+                suggestedAction: 'reject' as const,
+              },
+              success: false,
+              error: error.message,
+            };
+          }
+        }),
+      );
 
-      // 6. SQS로 배치 메시지 전송 (비동기 처리)
-      await this.sqsService.sendBatchImageVerificationTasks(verificationTasks);
+      // 5. 전체 결과 종합
+      const overallResult = this.aiService.getFinalVerificationResult(
+        analysisResults.map((r) => r.analysis),
+      );
 
-      // 7. 즉시 응답 반환 (비동기 처리 시작됨)
+      // 6. 검증 토큰 생성 (보안용)
+      const verificationToken = this.jwtService.sign(
+        {
+          userUuid,
+          challengeUuid,
+          imageUrls: analysisResults.map((r) => r.imageUrl),
+          timestamp: Date.now(),
+        },
+        { expiresIn: '10m' }, // 10분 유효
+      );
+
+      // 7. 프론트엔드에 반환할 응답
       const response = {
         success: true,
-        message: '이미지 검증이 시작되었습니다. 잠시 후 상태를 확인해주세요.',
-        postUuid,
-        overallStatus: 'processing',
-        canCreatePost: false,
-        totalImages: uploadResults.length,
-        pendingImages: uploadResults.length,
-        approvedImages: 0,
-        rejectedImages: 0,
-        reviewImages: 0,
-        averageConfidence: 0,
-        images: verificationRecords.map((record) => ({
-          imageUrl: record.imageUrl,
-          status: record.status,
-          confidence: record.confidence,
-          reasoning: record.reasoning,
-          isRelevant: record.isRelevant,
+        message: '이미지 검증 완료',
+        challengeInfo: {
+          challengeUuid: challenge.challengeUuid,
+          title: challenge.title,
+          verificationGuide: challenge.verificationGuide,
+        },
+        verification: {
+          overallStatus: overallResult.overallResult, // 'approved' | 'rejected' | 'pending_review'
+          averageConfidence: Math.round(overallResult.averageConfidence),
+          totalImages: analysisResults.length,
+          approvedImages: analysisResults.filter(
+            (r) => r.analysis.suggestedAction === 'approve',
+          ).length,
+          rejectedImages: analysisResults.filter(
+            (r) => r.analysis.suggestedAction === 'reject',
+          ).length,
+          reviewImages: 0, // review 상태 제거
+        },
+        images: analysisResults.map((result) => ({
+          imageUrl: result.imageUrl,
+          originalName: result.originalName,
+          status: result.analysis.suggestedAction, // 'approve' | 'reject'
+          confidence: result.analysis.confidence,
+          reasoning: result.analysis.reasoning,
+          isRelevant: result.analysis.isRelevant,
         })),
-        recommendedAction: 'AI 검증이 진행 중입니다. 잠시만 기다려주세요.',
+        verificationToken, // 게시글 생성 시 필요
+        canCreatePost: overallResult.overallResult === 'approved', // 게시글 생성 가능 여부
+        recommendations: this.getRecommendations(
+          overallResult.overallResult,
+          analysisResults,
+        ),
       };
 
       return response;
@@ -186,102 +227,6 @@ export class PostsService {
         message: error.message || '이미지 검증 중 오류가 발생했습니다.',
         canCreatePost: false,
       };
-    }
-  }
-
-  /**
-   * 이미지 검증 상태 확인 (폴링용)
-   */
-  async checkVerificationStatus(postUuid: string, userUuid: string) {
-    try {
-      // image_verification 테이블에서 해당 postUuid의 모든 검증 상태 조회
-      const verifications = await this.imageVerificationRepository.find({
-        where: { postUuid },
-        order: { createdAt: 'ASC' },
-      });
-
-      if (!verifications || verifications.length === 0) {
-        throw new Error('검증 정보를 찾을 수 없습니다.');
-      }
-
-      // 이미지별 상태 정리
-      const imageStatuses = verifications.map(v => ({
-        imageUrl: v.imageUrl,
-        status: v.status,
-        confidence: v.confidence,
-        reasoning: v.reasoning,
-        isRelevant: v.isRelevant,
-      }));
-
-      // 전체 상태 계산
-      const pendingCount = verifications.filter(v => v.status === 'pending').length;
-      const approvedCount = verifications.filter(v => v.status === 'approved').length;
-      const rejectedCount = verifications.filter(v => v.status === 'rejected').length;
-      const reviewCount = verifications.filter(v => v.status === 'review').length;
-
-      let overallStatus = 'processing';
-      let canCreatePost = false;
-
-      if (pendingCount === 0) {
-        // 모든 검증이 완료됨
-        if (approvedCount === verifications.length) {
-          overallStatus = 'approved';
-          canCreatePost = true;
-        } else if (rejectedCount > 0) {
-          overallStatus = 'rejected';
-        } else if (reviewCount > 0) {
-          overallStatus = 'review';
-        }
-      }
-
-      // 평균 신뢰도 계산
-      const averageConfidence = verifications.length > 0
-        ? Math.round(verifications.reduce((sum, v) => sum + v.confidence, 0) / verifications.length)
-        : 0;
-
-      return {
-        success: true,
-        postUuid,
-        overallStatus,
-        canCreatePost,
-        totalImages: verifications.length,
-        pendingImages: pendingCount,
-        approvedImages: approvedCount,
-        rejectedImages: rejectedCount,
-        reviewImages: reviewCount,
-        averageConfidence,
-        images: imageStatuses,
-        recommendedAction: this.getRecommendedAction(overallStatus, approvedCount, rejectedCount, reviewCount),
-      };
-    } catch (error) {
-      console.error('검증 상태 확인 실패:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 권장 액션 메시지 생성
-   */
-  private getRecommendedAction(
-    overallStatus: string,
-    approvedCount: number,
-    rejectedCount: number,
-    reviewCount: number,
-  ): string {
-    switch (overallStatus) {
-      case 'processing':
-        return 'AI 검증이 진행 중입니다. 잠시만 기다려주세요.';
-      case 'approved':
-        return '모든 이미지가 승인되었습니다. 게시글을 생성할 수 있습니다.';
-      case 'rejected':
-        if (rejectedCount === 1) {
-          return '일부 이미지가 챌린지와 관련이 없습니다. 다른 이미지로 다시 시도해주세요.';
-        }
-        return `${rejectedCount}개 이미지가 챌린지와 관련이 없습니다. 다른 이미지로 다시 시도해주세요.`;
-      case 'review':
-        return '일부 이미지가 수동 검토가 필요합니다. 관리자의 검토를 기다려주세요.';
-      default:
-        return '검증 상태를 확인할 수 없습니다.';
     }
   }
 

@@ -9,7 +9,7 @@ export interface ImageAnalysisResult {
   isRelevant: boolean;
   confidence: number;
   reasoning: string;
-  suggestedAction: 'approve' | 'reject' | 'review';
+  suggestedAction: 'approve' | 'reject';
 }
 
 @Injectable()
@@ -19,7 +19,7 @@ export class AiService {
 
   constructor() {
     this.bedrockClient = new BedrockRuntimeClient({
-      region: process.env.BEDROCK_AWS_REGION || 'ap-northeast-1',
+      region: process.env.BEDROCK_AWS_REGION || 'ap-northeast-2',
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -48,9 +48,13 @@ export class AiService {
         verificationGuide,
       );
 
-      // Claude 3.5 Haiku 모델 사용
+      // Claude 3.5 Sonnet 모델 사용 (이미지 분석 최고 성능)
+      // Fallback: 리전에서 지원하지 않으면 Haiku 사용
+      const modelId =
+        process.env.BEDROCK_MODEL_ID ||
+        'anthropic.claude-3-5-sonnet-20241022-v2:0';
       const command = new InvokeModelCommand({
-        modelId: 'anthropic.claude-3-haiku-20240307-v1:0',
+        modelId: modelId,
         body: JSON.stringify({
           anthropic_version: 'bedrock-2023-05-31',
           max_tokens: 1000,
@@ -90,7 +94,7 @@ export class AiService {
         isRelevant: false,
         confidence: 0,
         reasoning: `이미지 분석 중 오류가 발생했습니다.: ${error.message}`,
-        suggestedAction: 'review',
+        suggestedAction: 'reject',
       };
     }
   }
@@ -103,37 +107,114 @@ export class AiService {
     challengeDescription?: string,
     verificationGuide?: string,
   ): string {
+    // 인증 가이드를 단계별로 파싱
+    const parseVerificationSteps = (guide: string): string[] => {
+      if (!guide) return [];
+
+      // 숫자. 또는 Step 패턴으로 시작하는 라인들을 찾아서 분리
+      const steps = guide
+        .split(/\n/)
+        .filter((line) => /^\d+\.|^step\s+\d+/i.test(line.trim()));
+
+      if (steps.length === 0) {
+        // 패턴이 없으면 줄바꿈으로 분리
+        return guide.split(/\n/).filter((line) => line.trim());
+      }
+
+      return steps;
+    };
+
+    const verificationSteps = parseVerificationSteps(verificationGuide);
+    const stepsText =
+      verificationSteps.length > 0
+        ? verificationSteps
+            .map(
+              (step, idx) =>
+                `  ${idx + 1}. ${step.replace(/^\d+\.|^step\s+\d+\.?/i, '').trim()}`,
+            )
+            .join('\n')
+        : verificationGuide || '가이드 없음';
+
     return `
-당신은 챌린지 인증 이미지를 분석하는 AI 전문가입니다. 사용자가 업로드한 이미지가 다음 챌린지와 관련이 있는지 판단해주세요.
+당신은 챌린지 인증 이미지를 매우 엄격하게 분석하는 AI 전문가입니다. 
+사용자가 업로드한 이미지가 챌린지의 인증 가이드를 정확히 따르고 있는지 단계별로 검증해주세요.
 
 **챌린지 정보:**
 - 제목: ${challengeTitle}
 - 설명: ${challengeDescription || '설명 없음'}
-- 인증 가이드: ${verificationGuide || '가이드 없음'}
 
-**분석 기준:**
-1. 이미지가 인증 가이드에 명시된 요구사항을 충족하는가? (가장 중요)
-2. 인증 가이드에 명시된 특정 요소들이 이미지에 포함되어 있는가?
-3. 이미지가 실제 활동을 보여주는가? (스크린샷, 가짜 이미지 등은 의심)
-4. 챌린지 제목과의 연관성도 고려하되, 인증 가이드를 우선으로 판단하세요.
+**인증 가이드 (모든 단계를 빠짐없이 확인):**
+${stepsText}
 
-**중요 사항:**
-- 인증 가이드가 있다면 제목보다 인증 가이드의 요구사항을 더 중요하게 고려하세요.
-- 인증 가이드가 명확하지 않은 경우에만 제목과 설명을 참고하세요.
+**⚠️ 핵심 검증 원칙:**
+1. 인증 가이드를 문자 그대로 해석하여 엄격하게 검증
+2. "보이도록", "표시", "인증할만한 요소" 등의 키워드가 있으면 해당 내용이 이미지에 반드시 명확히 보여야 함
+3. 간접적 증거나 관련 환경만으로는 불충분 - 직접적인 증빙 필요
+
+**검증 프로세스:**
+
+【Step 1】 인증 가이드 요구사항 분석
+각 단계별로 반드시 확인해야 할 핵심 요소 추출:
+- "걸음수/횟수/시간" 등 수치 언급 → 해당 숫자가 화면에 표시되어야 함
+- "측정한다" → 측정 결과가 보여야 함  
+- "인증할만한 요소가 보이도록" → 명시된 요소가 명확히 식별 가능해야 함
+- "사진을 찍어" → 해당 활동의 직접적 증거 필요
+
+【Step 2】 이미지 검증
+인증 가이드의 각 요구사항별로 체크:
+□ Step 1 요구사항: [충족/미충족] - 구체적 근거
+□ Step 2 요구사항: [충족/미충족] - 구체적 근거  
+□ Step 3 요구사항: [충족/미충족] - 구체적 근거
+
+【Step 3】 엄격한 평가 기준 적용
+
+**구체적 검증 예시:**
+- "만보 이상의 걸음수를 인증할만한 요소가 보이도록" 
+  → ✅ 10,000보 이상 숫자가 앱/기기 화면에 표시
+  → ❌ 단순 런닝머신이나 운동 장비 사진
+  
+- "운동 시간이 표시된 화면"
+  → ✅ 운동 시간이 숫자로 명확히 표시된 화면
+  → ❌ 시계나 운동 중인 모습만 있는 사진
+
+- "독서 페이지 인증"  
+  → ✅ 책과 함께 읽은 페이지 수가 표시된 증빙
+  → ❌ 단순 책 표지나 독서 공간 사진
+
+**신뢰도 점수 기준:**
+- 80-100점: 모든 인증 가이드 요구사항을 명확하게 충족 → APPROVE
+- 60-79점: 핵심 요구사항은 충족하나 일부 불명확 → 엄격 판단하여 APPROVE/REJECT 결정
+- 40-59점: 일부 요구사항만 충족, 핵심 증빙 불충분 → REJECT
+- 0-39점: 요구사항 대부분 미충족 또는 무관 → REJECT
+
+**APPROVE 조건 (모두 충족해야 함):**
+✓ 인증 가이드의 모든 핵심 요구사항 충족
+✓ "보이도록", "표시" 등 요구한 요소가 명확히 식별 가능
+✓ 실제 활동을 직접적으로 증명하는 내용
+
+**REJECT 조건 (하나라도 해당되면):**
+✗ 인증 가이드 핵심 요구사항 중 하나라도 미충족
+✗ "보이도록" 요구한 요소가 보이지 않음  
+✗ 수치/데이터를 요구했는데 해당 정보 없음
+✗ 간접적 증거만 있고 직접적 증빙 없음
+✗ 관련 환경이나 도구만 보이고 실제 활동 증빙 없음
+
+**명확한 판단 원칙:**
+- 의심스럽거나 불확실하면 → REJECT
+- 요구사항을 "거의" 충족하면 → REJECT (거의는 미충족)
+- 관련은 있지만 정확하지 않으면 → REJECT
 
 **응답 형식 (JSON):**
 {
   "isRelevant": true/false,
   "confidence": 0-100 (숫자),
-  "reasoning": "구체적인 판단 근거를 한글로 작성",
-  "suggestedAction": "approve/reject/review"
+  "reasoning": "인증 가이드 각 Step별로: [Step 1] 충족/미충족 - 구체적 이유, [Step 2] 충족/미충족 - 구체적 이유, [Step 3] 충족/미충족 - 구체적 이유. 미충족시 정확히 어떤 요소가 부족한지 명시",
+  "suggestedAction": "approve/reject"
 }
 
-**예시:**
-- 런닝 챌린지 (인증 가이드: GPS 앱 화면 포함): GPS 운동 기록 화면 + 운동복 → approve
-- 런닝 챌린지 (인증 가이드: 운동화 착용 모습): 운동화를 신고 있는 발 사진 → approve
-- 런닝 챌린지: 음식 사진, 실내 풍경, 관련 없는 셀피 → reject
-- 애매한 경우 (인증 가이드와 부분적으로만 일치) → review
+**최종 판단 (review 사용 금지):**
+- approve: 모든 핵심 요구사항을 명확히 충족하는 경우만
+- reject: 그 외 모든 경우 (애매하면 reject)
 
 이미지를 분석하고 reasoning 필드는 반드시 한글로 작성하여 JSON 형식으로만 응답해주세요.
     `;
@@ -156,11 +237,9 @@ export class AiService {
         isRelevant: Boolean(result.isRelevant),
         confidence: Math.max(0, Math.min(100, Number(result.confidence) || 0)),
         reasoning: String(result.reasoning || '분석 결과 없음'),
-        suggestedAction: ['approve', 'reject', 'review'].includes(
-          result.suggestedAction,
-        )
+        suggestedAction: ['approve', 'reject'].includes(result.suggestedAction)
           ? result.suggestedAction
-          : 'review',
+          : 'reject',
       };
     } catch (error) {
       this.logger.error('AI 분석 결과 파싱 오류:', error);
@@ -168,7 +247,7 @@ export class AiService {
         isRelevant: false,
         confidence: 0,
         reasoning: '분석 결과를 파싱할 수 없습니다.',
-        suggestedAction: 'review',
+        suggestedAction: 'reject',
       };
     }
   }
@@ -198,13 +277,13 @@ export class AiService {
    * 전체 분석 결과를 종합하여 최종 판단
    */
   getFinalVerificationResult(results: ImageAnalysisResult[]): {
-    overallResult: 'approved' | 'rejected' | 'pending_review';
+    overallResult: 'approved' | 'rejected';
     averageConfidence: number;
     details: ImageAnalysisResult[];
   } {
     if (results.length === 0) {
       return {
-        overallResult: 'pending_review',
+        overallResult: 'rejected',
         averageConfidence: 0,
         details: [],
       };
@@ -213,18 +292,12 @@ export class AiService {
     const approvedCount = results.filter(
       (r) => r.suggestedAction === 'approve',
     ).length;
-    const rejectedCount = results.filter(
-      (r) => r.suggestedAction === 'reject',
-    ).length;
-    const reviewCount = results.filter(
-      (r) => r.suggestedAction === 'review',
-    ).length;
 
     const averageConfidence =
       results.reduce((sum, r) => sum + r.confidence, 0) / results.length;
 
-    // 모든 이미지가 승인되면 전체 승인
-    if (approvedCount === results.length && averageConfidence >= 70) {
+    // 엄격한 기준: 모든 이미지가 승인되어야만 전체 승인
+    if (approvedCount === results.length) {
       return {
         overallResult: 'approved',
         averageConfidence,
@@ -232,18 +305,9 @@ export class AiService {
       };
     }
 
-    // 하나라도 명확히 거절되면 전체 거절
-    if (rejectedCount > 0 && averageConfidence < 30) {
-      return {
-        overallResult: 'rejected',
-        averageConfidence,
-        details: results,
-      };
-    }
-
-    // 그 외의 경우는 검토 필요
+    // 하나라도 거절되면 전체 거절
     return {
-      overallResult: 'pending_review',
+      overallResult: 'rejected',
       averageConfidence,
       details: results,
     };

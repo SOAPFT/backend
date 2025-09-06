@@ -17,6 +17,8 @@ import { Challenge } from '@/entities/challenge.entity';
 import { UploadsModule } from '../uploads/uploads.module';
 import { S3Module } from '../s3/s3.module';
 import { JwtModule } from '@nestjs/jwt';
+import { SqsModule } from '../sqs/sqs.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -35,6 +37,7 @@ import { JwtModule } from '@nestjs/jwt';
     AiModule,
     UploadsModule,
     S3Module,
+    SqsModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'your-secret-key',
       signOptions: { expiresIn: '1h' },

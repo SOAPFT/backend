@@ -1,4 +1,3 @@
-import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 import * as winston from 'winston';
 import { WinstonModuleOptions } from 'nest-winston';
 import * as DailyRotateFile from 'winston-daily-rotate-file';
@@ -27,10 +26,15 @@ export const winstonConfig: WinstonModuleOptions = {
       level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
       format: winston.format.combine(
         winston.format.timestamp(),
-        nestWinstonModuleUtilities.format.nestLike('SOAPFT', {
-          prettyPrint: true,
-          colors: true,
-        }),
+        winston.format.errors({ stack: true }),
+        winston.format.splat(),
+        winston.format((info) => {
+          if (info.stack && typeof info.stack === 'string') {
+            info.stack = info.stack.replace(/\n+/g, ' | ');
+          }
+          return info;
+        })(),
+        winston.format.json(),
       ),
     }),
 
@@ -40,7 +44,7 @@ export const winstonConfig: WinstonModuleOptions = {
       datePattern: 'YYYY-MM-DD',
       level: 'error',
       maxSize: '20m',
-      maxFiles: '14d',
+      maxFiles: '7d',
       format: fileFormat,
       options: fileOptions, // 즉시 기록 설정 추가
       auditFile: 'logs/error-audit.json', // 파일 상태 추적
@@ -51,7 +55,7 @@ export const winstonConfig: WinstonModuleOptions = {
       filename: 'logs/combined-%DATE%.log',
       datePattern: 'YYYY-MM-DD',
       maxSize: '20m',
-      maxFiles: '14d',
+      maxFiles: '7d',
       format: fileFormat,
       options: fileOptions, // 즉시 기록 설정 추가
       auditFile: 'logs/combined-audit.json', // 파일 상태 추적

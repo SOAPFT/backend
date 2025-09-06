@@ -8,12 +8,8 @@ config({ path: `env/.${nodeEnv}.env` });
 
 // 환경별 경로 설정
 const isProd = process.env.NODE_ENV === 'production';
-const entityPath = isProd
-  ? 'dist/src/entities/*.entity.js'
-  : 'dist/src/entities/*.entity.js';
-const migrationPath = isProd
-  ? 'dist/database/migrations/**/*.js'
-  : 'database/migrations/**/*.js';
+const isDev = process.env.NODE_ENV === 'development';
+
 // NestJS에서 사용되는 설정
 export const typeOrmConfig = (configService: ConfigService): any => {
   return {
@@ -23,15 +19,12 @@ export const typeOrmConfig = (configService: ConfigService): any => {
     username: configService.get('DB_USERNAME') || 'postgres',
     password: configService.get('DB_PASSWORD') || 'postgres',
     database: configService.get('DB_DATABASE') || 'soapft',
-    entities: [entityPath],
+    entities: [__dirname + '/../**/*.entity.{js,ts}'],
     synchronize: configService.get('NODE_ENV') !== 'production',
     logging: configService.get('NODE_ENV') !== 'production',
-    migrations: [migrationPath],
+    migrations: [__dirname + '/../database/migrations/**/*.{js,ts}'],
     migrationsTableName: 'migrations',
-    ssl:
-      configService.get('NODE_ENV') === 'production'
-        ? { rejectUnauthorized: false }
-        : false,
+    ssl: { rejectUnauthorized: false },
   };
 };
 
@@ -42,13 +35,10 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_DATABASE || 'soapft',
-  entities: [entityPath],
-  migrations: [migrationPath],
+  entities: [__dirname + '/../**/*.entity.{js,ts}'],
+  migrations: [__dirname + '/../database/migrations/**/*.{js,ts}'],
   migrationsTableName: 'migrations',
-  ssl:
-    process.env.NODE_ENV === 'production'
-      ? { rejectUnauthorized: false }
-      : false,
+  ssl: { rejectUnauthorized: false },
 };
 
 // TypeORM CLI를 위한 DataSource 인스턴스

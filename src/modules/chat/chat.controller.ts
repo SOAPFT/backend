@@ -26,6 +26,7 @@ import {
   ApiMarkMessagesAsRead,
   ApiLeaveChatRoom,
   ApiFindOrCreateDirectRoom,
+  ApiJoinChatRoom,
 } from './decorators/chat.swagger';
 
 @ApiTags('chat')
@@ -131,5 +132,17 @@ export class ChatController {
     @UserUuid() userUuid: string,
   ) {
     return this.chatService.leaveChatRoom(userUuid, roomUuid);
+  }
+
+  /**
+   * 채팅방 입장
+   */
+  @Post('room/:roomUuid/join')
+  @ApiJoinChatRoom()
+  async joinChatRoom(
+    @Param('roomUuid') roomUuid: string,
+    @UserUuid() userUuid: string,
+  ) {
+    return this.chatService.joinChatRoom(userUuid, roomUuid);
   }
 }

@@ -9,7 +9,7 @@ import { User } from '@/entities/user.entity';
 import { CustomException } from '../../utils/custom-exception';
 import { ErrorCode } from '../../types/error-code.enum';
 
-type MissionStatus = '진행예정' | '진행중' | '완료';
+type MissionStatus = 'UPCOMING' | 'ONGOING' | 'COMPLETED';
 
 @Injectable()
 export class MissionService {
@@ -233,9 +233,9 @@ export class MissionService {
       .filter((mission) => mission) // 혹시라도 null 방지
       .map((mission) => {
         let status: MissionStatus;
-        if (now < mission.startTime) status = '진행예정';
-        else if (now <= mission.endTime) status = '진행중';
-        else status = '완료';
+        if (now < mission.startTime) status = 'UPCOMING';
+        else if (now <= mission.endTime) status = 'ONGOING';
+        else status = 'COMPLETED';
 
         return {
           id: mission.id,

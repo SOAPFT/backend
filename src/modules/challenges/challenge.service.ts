@@ -237,10 +237,22 @@ export class ChallengeService {
       select: ['userUuid', 'nickname', 'profileImage'],
     });
 
+    const now = new Date();
+    let status: 'UPCOMING' | 'ONGOING' | 'COMPLETED';
+
+    if (challenge.startDate > now) {
+      status = 'UPCOMING';
+    } else if (challenge.endDate < now) {
+      status = 'COMPLETED';
+    } else {
+      status = 'ONGOING';
+    }
+
     return {
       ...challenge,
       isParticipated,
       participants,
+      status,
     };
   }
 

@@ -213,7 +213,7 @@ export class MissionService {
     });
   }
 
-  // 내 미션 조회
+  // 내 참여 미션 조회
   async findMyMissions(userUuid: string) {
     const participations = await this.participationRepo.find({
       where: { userUuid },

@@ -23,6 +23,7 @@ export function ApiCreateMission() {
             durationSeconds: 3600,
             reward: 20,
             isLongTerm: false,
+            rewardTopN: 5,
           },
         },
         longTerm: {
@@ -35,6 +36,7 @@ export function ApiCreateMission() {
             endTime: '2025-08-18T23:59:59Z',
             reward: 20,
             isLongTerm: true,
+            rewardTopN: 5,
           },
         },
       },

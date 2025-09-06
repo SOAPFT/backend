@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsInt,
   IsBoolean,
+  Min,
 } from 'class-validator';
 
 export type MissionType = 'distance' | 'steps' | 'calories';
@@ -35,5 +36,10 @@ export class CreateMissionDto {
 
   @IsOptional()
   @IsBoolean()
-  isLongTerm?: boolean; // ✅ 추가
+  isLongTerm?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  rewardTopN?: number;
 }

@@ -113,11 +113,13 @@ export function ApiParticipateMission() {
     ApiResponse({ status: 404, description: '미션 또는 사용자 정보 없음' }),
   );
 }
+
 export function ApiSubmitMissionResult() {
   return applyDecorators(
     ApiOperation({
       summary: '미션 결과 제출',
-      description: '사용자가 완료한 미션 데이터를 제출합니다.',
+      description:
+        '사용자가 완료한 미션 데이터를 제출합니다. 미션 기간(시작~종료) 내에만 제출할 수 있습니다.',
     }),
     ApiParam({
       name: 'missionId',
@@ -137,8 +139,61 @@ export function ApiSubmitMissionResult() {
         required: ['resultData'],
       },
     }),
-    ApiResponse({ status: 200, description: '제출 성공' }),
-    ApiResponse({ status: 404, description: '참여 정보 없음' }),
+    // 성공
+    ApiResponse({
+      status: 200,
+      description: '제출 성공',
+      schema: {
+        example: {
+          id: 123,
+          missionId: 1,
+          userUuid: '01JYKVN18MCW5B9FZ1PP7T14XS',
+          resultData: 120,
+          completed: true,
+          createdAt: '2025-09-03T12:34:56.000Z',
+          updatedAt: '2025-09-03T12:35:10.000Z',
+        },
+      },
+    }),
+    // 참여 정보 없음
+    ApiResponse({
+      status: 404,
+      description: '참여 정보 없음',
+      schema: {
+        example: {
+          errorCode: 'NOT_FOUND',
+          message: '해당 미션에 참여한 기록이 없습니다.',
+          timestamp: '2025-09-03T12:35:10.000Z',
+          details: { missionId: 1 },
+        },
+      },
+    }),
+    // 아직 시작 전
+    ApiResponse({
+      status: 400,
+      description: '미션 시작 전 제출 불가',
+      schema: {
+        example: {
+          errorCode: 'CHALLENGE_NOT_STARTED',
+          message: '아직 미션이 시작되지 않았습니다.',
+          timestamp: '2025-09-03T12:35:10.000Z',
+          details: { missionId: 1, startTime: '2025-09-10T00:00:00.000Z' },
+        },
+      },
+    }),
+    // 이미 종료됨
+    ApiResponse({
+      status: 400,
+      description: '미션 종료 후 제출 불가',
+      schema: {
+        example: {
+          errorCode: 'CHALLENGE_ALREADY_FINISHED',
+          message: '챌린지가 이미 종료되었습니다.',
+          timestamp: '2025-09-03T12:35:10.000Z',
+          details: { missionId: 1, endTime: '2025-09-01T23:59:59.000Z' },
+        },
+      },
+    }),
   );
 }
 

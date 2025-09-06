@@ -93,7 +93,7 @@ export class MissionController {
     return this.missionService.submitResult(missionId, userUuid, resultData);
   }
 
-  // 전체 미션 조회
+  // 진행 중 미션 조회
   @Get()
   @ApiGetAllMissions()
   @ApiGetAllMissions()

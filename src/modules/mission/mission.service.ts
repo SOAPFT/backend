@@ -2,12 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Mission } from '@/entities/mission.entity';
 import { MissionParticipation } from '@/entities/mission-participation.entity';
-import { Repository, In } from 'typeorm';
+import { Repository, In, MoreThan } from 'typeorm';
 import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { User } from '@/entities/user.entity';
+import { CustomException } from '../../utils/custom-exception';
+import { ErrorCode } from '../../types/error-code.enum';
 
-type MissionStatus = '진행예정' | '진행중' | '완료';
+type MissionStatus = 'UPCOMING' | 'ONGOING' | 'COMPLETED';
 
 @Injectable()
 export class MissionService {
@@ -158,6 +160,22 @@ export class MissionService {
       throw new NotFoundException('미션을 찾을 수 없습니다.');
     }
 
+    const now = new Date();
+
+    if (mission.startTime > now) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_NOT_STARTED,
+        '아직 미션이 시작되지 않았습니다.',
+      );
+    }
+
+    if (mission.endTime < now) {
+      CustomException.throw(
+        ErrorCode.CHALLENGE_ALREADY_FINISHED,
+        '챌린지가 이미 종료되었습니다.',
+      );
+    }
+
     participation.resultData = resultData;
 
     // 단기 미션이면 완료 처리
@@ -168,21 +186,22 @@ export class MissionService {
     return this.participationRepo.save(participation);
   }
 
-  // 전체 미션 조회
+  // 진행 중 & 예정 미션 조회
   async findAll() {
     const now = new Date();
 
     const missions = await this.missionRepo.find({
-      order: { startTime: 'DESC' },
+      where: {
+        endTime: MoreThan(now),
+      },
+      order: { startTime: 'ASC' },
     });
 
     return missions.map((mission) => {
-      let status: 'UPCOMING' | 'ONGOING' | 'COMPLETED';
+      let status: 'UPCOMING' | 'ONGOING';
 
       if (mission.startTime > now) {
         status = 'UPCOMING';
-      } else if (mission.endTime < now) {
-        status = 'COMPLETED';
       } else {
         status = 'ONGOING';
       }
@@ -194,7 +213,7 @@ export class MissionService {
     });
   }
 
-  // 내 미션 조회
+  // 내 참여 미션 조회
   async findMyMissions(userUuid: string) {
     const participations = await this.participationRepo.find({
       where: { userUuid },
@@ -214,9 +233,9 @@ export class MissionService {
       .filter((mission) => mission) // 혹시라도 null 방지
       .map((mission) => {
         let status: MissionStatus;
-        if (now < mission.startTime) status = '진행예정';
-        else if (now <= mission.endTime) status = '진행중';
-        else status = '완료';
+        if (now < mission.startTime) status = 'UPCOMING';
+        else if (now <= mission.endTime) status = 'ONGOING';
+        else status = 'COMPLETED';
 
         return {
           id: mission.id,

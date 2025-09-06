@@ -231,6 +231,12 @@ export function ApiGetChallenge() {
             format: 'date-time',
             example: '2025-06-22T12:00:00Z',
           },
+          status: {
+            type: 'string',
+            enum: ['UPCOMING', 'ONGOING', 'COMPLETED'],
+            example: 'ONGOING',
+            description: '진행 상태',
+          },
           updatedAt: {
             type: 'string',
             format: 'date-time',

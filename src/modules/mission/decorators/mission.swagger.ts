@@ -23,6 +23,7 @@ export function ApiCreateMission() {
             durationSeconds: 3600,
             reward: 20,
             isLongTerm: false,
+            rewardTopN: 5,
           },
         },
         longTerm: {
@@ -35,6 +36,7 @@ export function ApiCreateMission() {
             endTime: '2025-08-18T23:59:59Z',
             reward: 20,
             isLongTerm: true,
+            rewardTopN: 5,
           },
         },
       },
@@ -87,7 +89,56 @@ export function ApiGetMissionDetail() {
       description: '미션 상세 정보와 사용자 랭킹 정보를 함께 반환합니다.',
     }),
     ApiParam({ name: 'id', description: '미션 ID', example: 1 }),
-    ApiResponse({ status: 200, description: '조회 성공' }),
+    ApiResponse({
+      status: 200,
+      description: '조회 성공',
+      schema: {
+        example: {
+          mission: {
+            id: 5,
+            title: '8월 운동 미션',
+            description: '하루동안 칼로리 많이 소모하기',
+            type: 'calories',
+            startTime: '2025-08-10T15:00:00.000Z',
+            endTime: '2025-08-12T14:59:59.000Z',
+            durationSeconds: 86400,
+            reward: 20,
+            isLongTerm: true,
+            rewardTopN: null,
+            createdAt: '2025-08-10T03:54:54.693Z',
+            rewardsDistributed: false,
+          },
+          isParticipating: false,
+          myResult: null,
+          myRank: null,
+          myName: null,
+          myProfileImage: null,
+          rankings: [
+            {
+              userUuid: '01K26XZ0W6E635A9F3G27ZP70C',
+              name: '꿈꾸는 양배추',
+              profileImage:
+                'https://nullisdefined.s3.ap-northeast-2.amazonaws.com/images/d06fa637a7bc403b5531305594791aaa.png',
+              result: 350,
+            },
+            {
+              userUuid: '01K2H6ZRYSCRYVTRJZPE6G51WK',
+              name: '무서운 딸기',
+              profileImage: null,
+              result: 0,
+            },
+            {
+              userUuid: '01K26NRFRBW8J5MH9ZSQESQ7DP',
+              name: '깔끔한 사과',
+              profileImage:
+                'https://nullisdefined.s3.ap-northeast-2.amazonaws.com/images/d06fa637a7bc403b5531305594791aaa.png',
+              result: 0,
+            },
+          ],
+          status: 'COMPLETED',
+        },
+      },
+    }),
     ApiResponse({ status: 404, description: '미션을 찾을 수 없음' }),
   );
 }

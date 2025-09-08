@@ -36,6 +36,12 @@ export class Mission {
   @Column({ type: 'boolean', default: false })
   isLongTerm: boolean;
 
+  @Column({ type: 'int', nullable: true })
+  rewardTopN: number;
+
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column({ type: 'boolean', default: false })
+  rewardsDistributed: boolean;
 }

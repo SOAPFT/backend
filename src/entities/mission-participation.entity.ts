@@ -25,6 +25,10 @@ export class MissionParticipation {
   @Column({ type: 'double precision', nullable: true })
   resultData: number;
 
+  // 보상 지급 여부
+  @Column({ default: false })
+  rewarded: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 }

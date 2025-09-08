@@ -2,12 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Mission } from '@/entities/mission.entity';
 import { MissionParticipation } from '@/entities/mission-participation.entity';
-import { Repository, In, MoreThan } from 'typeorm';
+import { Repository, In, MoreThan, LessThan } from 'typeorm';
 import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { User } from '@/entities/user.entity';
 import { CustomException } from '../../utils/custom-exception';
 import { ErrorCode } from '../../types/error-code.enum';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 type MissionStatus = 'UPCOMING' | 'ONGOING' | 'COMPLETED';
 
@@ -263,5 +264,100 @@ export class MissionService {
     await this.participationRepo.remove(participation);
 
     return { message: '미션 참여가 취소되었습니다.' };
+  }
+
+  /**
+   * 매일 00:00 실행
+   * 1) 오늘 시작하는 미션: 로그 출력
+   * 2) 종료된 미션 중 보상 미지급(rewardsDistributed=false): 상위 rank명에게 reward 지급
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleDailyMissionJobs() {
+    const now = new Date();
+
+    //종료된 미션 중 보상 미지급 분배
+    const endedMissions = await this.missionRepo.find({
+      where: { endTime: LessThan(now), rewardsDistributed: false },
+      order: { endTime: 'ASC' },
+    });
+
+    if (endedMissions.length === 0) {
+      return;
+    }
+
+    for (const mission of endedMissions) {
+      try {
+        // 해당 미션 참여자 로드
+        const participations = await this.participationRepo.find({
+          where: { missionId: mission.id },
+        });
+
+        if (participations.length === 0) {
+          console.log(' - 참여자 없음 → 보상 없이 종료 표시');
+          mission.rewardsDistributed = true;
+          await this.missionRepo.save(mission);
+          continue;
+        }
+
+        // 결과 있는 참여자만 추출 (resultData null 제외)
+        const withResult = participations
+          .filter((p) => typeof p.resultData === 'number')
+          .sort((a, b) => b.resultData! - a.resultData!); // 내림차순: 큰 값이 상위
+
+        if (withResult.length === 0) {
+          mission.rewardsDistributed = true;
+          await this.missionRepo.save(mission);
+          continue;
+        }
+
+        // 상위 N명 추출 (mission.rank)
+        const topN = Math.max(0, mission.rewardTopN ?? 0);
+        const winners = withResult.slice(0, topN);
+
+        if (winners.length === 0) {
+          mission.rewardsDistributed = true;
+          await this.missionRepo.save(mission);
+          continue;
+        }
+
+        // 보상 지급 대상 userUuid 모음
+        const winnerUuids = winners.map((p) => p.userUuid);
+        const winnerUsers = await this.userRepo.find({
+          where: { userUuid: In(winnerUuids) },
+        });
+
+        // 유저 맵핑 (없을 수도 있으니 방어)
+        const userMap = new Map(winnerUsers.map((u) => [u.userUuid, u]));
+
+        // 코인 지급
+        for (const w of winners) {
+          const u = userMap.get(w.userUuid);
+          if (!u) {
+            console.log(`사용자 없음(userUuid=${w.userUuid})`);
+            continue;
+          }
+          u.coins = (u.coins ?? 0) + (mission.reward ?? 0);
+          await this.userRepo.save(u);
+
+          // 참여 레코드 표시
+          w.rewarded = true;
+          await this.participationRepo.save(w);
+        }
+
+        // 미션 보상 분배 완료 플래그
+        mission.rewardsDistributed = true;
+        await this.missionRepo.save(mission);
+
+        console.log(` [정산 완료] 미션 ${mission.id}`);
+      } catch (err: any) {
+        console.error(
+          ` [정산 오류] 미션 ${mission.id} 처리 중 에러:`,
+          err?.message || err,
+        );
+        // 오류가 나도 다른 미션은 계속 진행 (고의적으로 전체 중단 X)
+      }
+    }
+
+    console.log('[미션 스케줄러] 모든 종료/미지급 미션 정산 완료');
   }
 }

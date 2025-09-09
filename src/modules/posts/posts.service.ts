@@ -137,7 +137,8 @@ export class PostsService {
           status: 'pending',
         });
 
-        const savedVerification = await this.imageVerificationRepository.save(verification);
+        const savedVerification =
+          await this.imageVerificationRepository.save(verification);
         verificationRecords.push(savedVerification);
 
         // SQS 메시지 준비
@@ -154,11 +155,25 @@ export class PostsService {
       // 6. SQS로 배치 메시지 전송 (비동기 처리)
       await this.sqsService.sendBatchImageVerificationTasks(verificationTasks);
 
-      // 7. 즉시 응답 반환 (비동기 처리 시작됨)
+      // 7. 검증 토큰 생성 (게시글 생성 시 보안용)
+      const verificationToken = this.jwtService.sign(
+        {
+          postUuid,
+          userUuid,
+          challengeUuid,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          expiresIn: '24h', // 24시간 유효
+        },
+      );
+
+      // 8. 즉시 응답 반환 (비동기 처리 시작됨)
       const response = {
         success: true,
         message: '이미지 검증이 시작되었습니다. 잠시 후 상태를 확인해주세요.',
         postUuid,
+        verificationToken, // 게시글 생성 시 필요한 토큰
         overallStatus: 'processing',
         canCreatePost: false,
         totalImages: uploadResults.length,
@@ -205,7 +220,7 @@ export class PostsService {
       }
 
       // 이미지별 상태 정리
-      const imageStatuses = verifications.map(v => ({
+      const imageStatuses = verifications.map((v) => ({
         imageUrl: v.imageUrl,
         status: v.status,
         confidence: v.confidence,
@@ -214,10 +229,18 @@ export class PostsService {
       }));
 
       // 전체 상태 계산
-      const pendingCount = verifications.filter(v => v.status === 'pending').length;
-      const approvedCount = verifications.filter(v => v.status === 'approved').length;
-      const rejectedCount = verifications.filter(v => v.status === 'rejected').length;
-      const reviewCount = verifications.filter(v => v.status === 'review').length;
+      const pendingCount = verifications.filter(
+        (v) => v.status === 'pending',
+      ).length;
+      const approvedCount = verifications.filter(
+        (v) => v.status === 'approved',
+      ).length;
+      const rejectedCount = verifications.filter(
+        (v) => v.status === 'rejected',
+      ).length;
+      const reviewCount = verifications.filter(
+        (v) => v.status === 'review',
+      ).length;
 
       let overallStatus = 'processing';
       let canCreatePost = false;
@@ -235,9 +258,18 @@ export class PostsService {
       }
 
       // 평균 신뢰도 계산
-      const averageConfidence = verifications.length > 0
-        ? Math.round(verifications.reduce((sum, v) => sum + v.confidence, 0) / verifications.length)
-        : 0;
+      const averageConfidence =
+        verifications.length > 0
+          ? Math.round(
+              verifications.reduce((sum, v) => sum + v.confidence, 0) /
+                verifications.length,
+            )
+          : 0;
+
+      // 승인된 이미지 URL 목록 (게시글 생성 시 사용)
+      const approvedImageUrls = verifications
+        .filter((v) => v.status === 'approved')
+        .map((v) => v.imageUrl);
 
       return {
         success: true,
@@ -250,8 +282,14 @@ export class PostsService {
         rejectedImages: rejectedCount,
         reviewImages: reviewCount,
         averageConfidence,
+        approvedImageUrls, // 승인된 이미지 URL 목록
         images: imageStatuses,
-        recommendedAction: this.getRecommendedAction(overallStatus, approvedCount, rejectedCount, reviewCount),
+        recommendedAction: this.getRecommendedAction(
+          overallStatus,
+          approvedCount,
+          rejectedCount,
+          reviewCount,
+        ),
       };
     } catch (error) {
       console.error('검증 상태 확인 실패:', error);

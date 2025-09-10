@@ -18,6 +18,7 @@ import { UploadsModule } from '../uploads/uploads.module';
 import { S3Module } from '../s3/s3.module';
 import { JwtModule } from '@nestjs/jwt';
 import { SqsModule } from '../sqs/sqs.module';
+import { ChatbotModule } from '../chatbot/chatbot.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { SqsModule } from '../sqs/sqs.module';
     UploadsModule,
     S3Module,
     SqsModule,
+    ChatbotModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'your-secret-key',
       signOptions: { expiresIn: '1h' },

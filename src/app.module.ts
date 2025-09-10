@@ -23,6 +23,8 @@ import { BoModule } from './modules/bo/bo.module';
 import { AiModule } from './modules/ai/ai.module';
 import { MissionModule } from './modules/mission/mission.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
+import { SchedulerModule } from './modules/scheduler/scheduler.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -52,6 +54,8 @@ import { PaymentModule } from './modules/payment/payment.module';
     AiModule,
     MissionModule,
     PaymentModule,
+    ChatbotModule,
+    SchedulerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

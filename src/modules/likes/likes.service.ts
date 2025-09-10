@@ -2,7 +2,10 @@ import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Like } from '@/entities/like.entity';
+import { Post } from '@/entities/post.entity';
+import { User } from '@/entities/user.entity';
 import { UsersService } from '../users/users.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CustomException } from '@/utils/custom-exception';
 import { ErrorCode } from '@/types/error-code.enum';
 
@@ -11,8 +14,13 @@ export class LikesService {
   constructor(
     @InjectRepository(Like)
     private likeRepository: Repository<Like>,
+    @InjectRepository(Post)
+    private postRepository: Repository<Post>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     @Inject(forwardRef(() => UsersService))
     private userService: UsersService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -46,6 +54,32 @@ export class LikesService {
 
     // 게시글의 전체 좋아요 수 조회
     const likeCount = await this.getLikeCountByPostId(postUuid);
+
+    // 좋아요 알림 발송
+    try {
+      const post = await this.postRepository.findOne({
+        where: { postUuid },
+        select: ['userUuid'],
+      });
+
+      if (post && post.userUuid !== userUuid) {
+        const liker = await this.userRepository.findOne({
+          where: { userUuid },
+          select: ['nickname'],
+        });
+
+        if (liker) {
+          await this.notificationsService.createPostLikeNotification(
+            post.userUuid,
+            userUuid,
+            liker.nickname,
+            postUuid,
+          );
+        }
+      }
+    } catch (error) {
+      console.error('좋아요 알림 발송 실패:', error);
+    }
 
     return {
       id: like.id,

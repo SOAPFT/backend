@@ -1,10 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} from '@aws-sdk/client-s3';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { Logger } from 'winston';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,7 +16,9 @@ export class S3Service {
 
   constructor(private readonly configService: ConfigService) {
     this.bucketName = this.configService.get<string>('AWS_S3_BUCKET');
-    this.cdnDomain = this.configService.get<string>('AWS_CLOUDFRONT_DOMAIN') || 'd6md6o5keoxyr.cloudfront.net';
+    this.cdnDomain =
+      this.configService.get<string>('AWS_CLOUDFRONT_DOMAIN') ||
+      'd6md6o5keoxyr.cloudfront.net';
 
     this.s3 = new S3Client({
       credentials: {
@@ -38,7 +36,10 @@ export class S3Service {
       const fileName = `${uuidv4()}.jpg`; // 최적화 후 항상 JPEG로 변환
 
       // 이미지 최적화 (Bedrock AI 5MB 제한 대응)
-      const optimizedBuffer = await this.optimizeImage(file.buffer, file.originalname);
+      const optimizedBuffer = await this.optimizeImage(
+        file.buffer,
+        file.originalname,
+      );
 
       const upload = new Upload({
         client: this.s3,
@@ -54,12 +55,14 @@ export class S3Service {
       await upload.done();
       // CDN URL 사용 (더 빠른 이미지 로딩)
       const location = `https://${this.cdnDomain}/images/${fileName}`;
-      this.logger.info('이미지 업로드 성공', { 
-        location, 
+      this.logger.info('이미지 업로드 성공', {
+        location,
         s3Key: `images/${fileName}`,
         originalSize: file.size,
         optimizedSize: optimizedBuffer.length,
-        compressionRatio: Math.round((1 - optimizedBuffer.length / file.size) * 100)
+        compressionRatio: Math.round(
+          (1 - optimizedBuffer.length / file.size) * 100,
+        ),
       });
       return location;
     } catch (error) {
@@ -71,7 +74,10 @@ export class S3Service {
   /**
    * 이미지 최적화 - Bedrock AI 5MB 제한 대응
    */
-  private async optimizeImage(buffer: Buffer, originalName: string): Promise<Buffer> {
+  private async optimizeImage(
+    buffer: Buffer,
+    originalName: string,
+  ): Promise<Buffer> {
     try {
       const maxSize = 4 * 1024 * 1024; // 4MB (여유를 두고)
       let quality = 85;
@@ -80,14 +86,14 @@ export class S3Service {
       // 1차 최적화: 크기 조정 + 품질 조정
       optimizedBuffer = await sharp(buffer)
         .rotate() // EXIF 회전 정보 적용
-        .resize(2048, 2048, { 
+        .resize(2048, 2048, {
           fit: 'inside',
-          withoutEnlargement: true 
+          withoutEnlargement: true,
         })
-        .jpeg({ 
+        .jpeg({
           quality,
           progressive: true,
-          mozjpeg: true
+          mozjpeg: true,
         })
         .toBuffer();
 
@@ -96,14 +102,14 @@ export class S3Service {
         quality -= 10;
         optimizedBuffer = await sharp(buffer)
           .rotate()
-          .resize(1920, 1920, { 
+          .resize(1920, 1920, {
             fit: 'inside',
-            withoutEnlargement: true 
+            withoutEnlargement: true,
           })
-          .jpeg({ 
+          .jpeg({
             quality,
             progressive: true,
-            mozjpeg: true
+            mozjpeg: true,
           })
           .toBuffer();
       }
@@ -112,14 +118,14 @@ export class S3Service {
       if (optimizedBuffer.length > maxSize) {
         optimizedBuffer = await sharp(buffer)
           .rotate()
-          .resize(1600, 1600, { 
+          .resize(1600, 1600, {
             fit: 'inside',
-            withoutEnlargement: true 
+            withoutEnlargement: true,
           })
-          .jpeg({ 
+          .jpeg({
             quality: 70,
             progressive: true,
-            mozjpeg: true
+            mozjpeg: true,
           })
           .toBuffer();
       }
@@ -128,13 +134,18 @@ export class S3Service {
         originalName,
         originalSize: buffer.length,
         optimizedSize: optimizedBuffer.length,
-        compressionRatio: Math.round((1 - optimizedBuffer.length / buffer.length) * 100),
-        finalQuality: quality
+        compressionRatio: Math.round(
+          (1 - optimizedBuffer.length / buffer.length) * 100,
+        ),
+        finalQuality: quality,
       });
 
       return optimizedBuffer;
     } catch (error) {
-      this.logger.error('이미지 최적화 실패', { originalName, error: error.message });
+      this.logger.error('이미지 최적화 실패', {
+        originalName,
+        error: error.message,
+      });
       // 최적화 실패 시 원본을 크기만 조정해서 반환
       return await sharp(buffer)
         .rotate()

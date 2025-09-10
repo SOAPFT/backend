@@ -7,6 +7,7 @@ import { Comment } from '@/entities/comment.entity';
 import { Post } from '@/entities/post.entity';
 import { User } from '@/entities/user.entity';
 import { UsersService } from '../users/users.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CustomException } from '@/utils/custom-exception';
 import { ErrorCode } from '@/types/error-code.enum';
 
@@ -20,6 +21,7 @@ export class CommentsService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private userService: UsersService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /*
@@ -62,6 +64,52 @@ export class CommentsService {
     });
 
     const savedComment = await this.commentRepository.save(newComment);
+
+    // 댓글 알림 및 멘션 알림 발송
+    try {
+      const commenter = await this.userRepository.findOne({
+        where: { userUuid },
+        select: ['nickname'],
+      });
+
+      if (commenter) {
+        // 1. 게시글 작성자에게 댓글 알림 (자신의 게시글이 아닌 경우)
+        if (post.userUuid !== userUuid) {
+          await this.notificationsService.createPostCommentNotification(
+            post.userUuid,
+            userUuid,
+            commenter.nickname,
+            postUuid,
+            content.length > 50 ? content.substring(0, 50) + '...' : content,
+          );
+        }
+
+        // 2. 멘션된 사용자들에게 멘션 알림
+        const mentionedUsernames = this.extractMentions(content);
+        if (mentionedUsernames.length > 0) {
+          // 닉네임으로 사용자 조회
+          const mentionedUsers = await this.userRepository.find({
+            where: mentionedUsernames.map(nickname => ({ nickname })),
+            select: ['userUuid', 'nickname'],
+          });
+
+          // 각 멘션된 사용자에게 알림 발송 (자신은 제외)
+          for (const mentionedUser of mentionedUsers) {
+            if (mentionedUser.userUuid !== userUuid) {
+              await this.notificationsService.createMentionNotification(
+                mentionedUser.userUuid,
+                userUuid,
+                commenter.nickname,
+                postUuid,
+                content.length > 50 ? content.substring(0, 50) + '...' : content,
+              );
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('댓글 알림 발송 실패:', error);
+    }
 
     return {
       message: '댓글이 성공적으로 생성되었습니다.',
@@ -210,5 +258,21 @@ export class CommentsService {
     return {
       message: '댓글이 성공적으로 삭제되었습니다.',
     };
+  }
+
+  /**
+   * 텍스트에서 @닉네임 멘션을 추출하는 메서드
+   */
+  private extractMentions(content: string): string[] {
+    const mentionRegex = /@([a-zA-Z0-9가-힣_]+)/g;
+    const matches = [];
+    let match;
+
+    while ((match = mentionRegex.exec(content)) !== null) {
+      matches.push(match[1]); // @를 제외한 닉네임만 추출
+    }
+
+    // 중복 제거
+    return [...new Set(matches)];
   }
 }

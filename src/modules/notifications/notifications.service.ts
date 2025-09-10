@@ -456,4 +456,116 @@ export class NotificationsService {
       data: { senderUuid, senderNickname, chatRoomUuid, messageContent },
     });
   }
+
+  /**
+   * 챌린지 시작 알림 생성
+   */
+  async createChallengeStartNotification(
+    recipientUuids: string[],
+    challengeTitle: string,
+    challengeUuid: string,
+  ): Promise<{ success: number; failed: number }> {
+    return this.createBulkNotifications(recipientUuids, {
+      senderUuid: null,
+      type: NotificationType.CHALLENGE_START,
+      title: '챌린지가 시작되었습니다',
+      content: `"${challengeTitle}" 챌린지가 시작되었습니다. 지금부터 인증을 시작해보세요!`,
+      data: { challengeUuid, challengeTitle },
+    });
+  }
+
+  /**
+   * 챌린지 종료 알림 생성
+   */
+  async createChallengeEndNotification(
+    recipientUuids: string[],
+    challengeTitle: string,
+    challengeUuid: string,
+    isSuccess: boolean,
+  ): Promise<{ success: number; failed: number }> {
+    const title = '챌린지가 종료되었습니다';
+    const content = isSuccess
+      ? `축하합니다! "${challengeTitle}" 챌린지를 성공적으로 완료했습니다.`
+      : `"${challengeTitle}" 챌린지가 종료되었습니다. 다음 기회에 도전해보세요!`;
+
+    return this.createBulkNotifications(recipientUuids, {
+      senderUuid: null,
+      type: NotificationType.CHALLENGE_END,
+      title,
+      content,
+      data: { challengeUuid, challengeTitle, isSuccess },
+    });
+  }
+
+  /**
+   * 챌린지 시작 리마인드 알림 생성 (하루 전)
+   */
+  async createChallengeReminderNotification(
+    recipientUuids: string[],
+    challengeTitle: string,
+    challengeUuid: string,
+  ): Promise<{ success: number; failed: number }> {
+    return this.createBulkNotifications(recipientUuids, {
+      senderUuid: null,
+      type: NotificationType.CHALLENGE_REMINDER,
+      title: '챌린지 시작 하루 전입니다',
+      content: `내일 "${challengeTitle}" 챌린지가 시작됩니다. 준비하세요!`,
+      data: { challengeUuid, challengeTitle },
+    });
+  }
+
+  /**
+   * 전체미션 생성 알림
+   */
+  async createMissionCreatedNotification(
+    recipientUuids: string[],
+    missionTitle: string,
+    missionId: number,
+    description?: string,
+  ): Promise<{ success: number; failed: number }> {
+    return this.createBulkNotifications(recipientUuids, {
+      senderUuid: null,
+      type: NotificationType.MISSION_CREATED,
+      title: '새로운 전체 미션이 생성되었습니다',
+      content: `"${missionTitle}" 미션에 참여해보세요!${description ? ` - ${description}` : ''}`,
+      data: { missionId, missionTitle, description },
+    });
+  }
+
+  /**
+   * 미션 시작 리마인드 알림 생성 (하루 전)
+   */
+  async createMissionReminderNotification(
+    recipientUuids: string[],
+    missionTitle: string,
+    missionId: number,
+  ): Promise<{ success: number; failed: number }> {
+    return this.createBulkNotifications(recipientUuids, {
+      senderUuid: null,
+      type: NotificationType.MISSION_REMINDER,
+      title: '미션 시작 하루 전입니다',
+      content: `내일 "${missionTitle}" 미션이 시작됩니다. 준비하세요!`,
+      data: { missionId, missionTitle },
+    });
+  }
+
+  /**
+   * 멘션 알림 생성
+   */
+  async createMentionNotification(
+    recipientUuid: string,
+    senderUuid: string,
+    senderNickname: string,
+    postUuid: string,
+    mentionContext: string,
+  ): Promise<NotificationResponseDto> {
+    return this.createNotification({
+      recipientUuid,
+      senderUuid,
+      type: NotificationType.MENTION,
+      title: '누군가 회원님을 언급했습니다',
+      content: `${senderNickname}님이 회원님을 언급했습니다: "${mentionContext}"`,
+      data: { senderUuid, senderNickname, postUuid, mentionContext },
+    });
+  }
 }

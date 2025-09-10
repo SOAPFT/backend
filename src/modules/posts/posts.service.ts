@@ -23,6 +23,7 @@ import { UploadsService } from '../uploads/uploads.service';
 import { JwtService } from '@nestjs/jwt';
 import { S3Service } from '../s3/s3.service';
 import { SqsService } from '../sqs/sqs.service';
+import { ChatbotService } from '../chatbot/chatbot.service';
 import axios from 'axios';
 
 @Injectable()
@@ -53,6 +54,7 @@ export class PostsService {
     private s3Service: S3Service,
     private sqsService: SqsService,
     private jwtService: JwtService,
+    private chatbotService: ChatbotService,
   ) {}
 
   /**
@@ -369,6 +371,32 @@ export class PostsService {
 
       const savedPost = await this.postRepository.save(post);
 
+      // 3. 챌린지 게시글인 경우 챗봇 알림 전송
+      if (createVerifiedPostDto.challengeUuid) {
+        this.chatbotService.sendAuthCompletionMessage(
+          userUuid,
+          createVerifiedPostDto.challengeUuid,
+          savedPost.postUuid,
+        ).catch(error => {
+          console.error('챗봇 알림 전송 실패:', error);
+        });
+
+        // 모든 참여자가 인증했는지 확인하고 축하 메시지 전송
+        this.chatbotService.checkAllParticipantsAuthenticated(
+          createVerifiedPostDto.challengeUuid,
+        ).then(allAuthenticated => {
+          if (allAuthenticated) {
+            this.chatbotService.sendGroupCompletionMessage(
+              createVerifiedPostDto.challengeUuid,
+            ).catch(error => {
+              console.error('그룹 완료 메시지 전송 실패:', error);
+            });
+          }
+        }).catch(error => {
+          console.error('참여자 인증 상태 확인 실패:', error);
+        });
+      }
+
       return {
         success: true,
         message: '게시글이 성공적으로 생성되었습니다.',
@@ -431,6 +459,32 @@ export class PostsService {
     });
 
     await this.postRepository.save(newPost);
+
+    // 챌린지 게시글인 경우 챗봇 알림 전송
+    if (dto.challengeUuid) {
+      this.chatbotService.sendAuthCompletionMessage(
+        userUuid,
+        dto.challengeUuid,
+        newPost.postUuid,
+      ).catch(error => {
+        console.error('챗봇 알림 전송 실패:', error);
+      });
+
+      // 모든 참여자가 인증했는지 확인하고 축하 메시지 전송
+      this.chatbotService.checkAllParticipantsAuthenticated(
+        dto.challengeUuid,
+      ).then(allAuthenticated => {
+        if (allAuthenticated) {
+          this.chatbotService.sendGroupCompletionMessage(
+            dto.challengeUuid,
+          ).catch(error => {
+            console.error('그룹 완료 메시지 전송 실패:', error);
+          });
+        }
+      }).catch(error => {
+        console.error('참여자 인증 상태 확인 실패:', error);
+      });
+    }
 
     return {
       message: '게시물이 생성되었습니다.',

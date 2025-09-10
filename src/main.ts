@@ -10,7 +10,7 @@ const envPath = path.join(
 );
 try {
   dotenv.config({ path: envPath });
-} catch (error) {
+} catch {
   console.log(`환경변수 파일을 찾을 수 없습니다: ${envPath}`);
   console.log('시스템 환경변수를 사용합니다.');
 }

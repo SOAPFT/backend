@@ -200,7 +200,7 @@ export class ChatService {
     // 채팅방 생성
     const roomUuid = ulid();
     const roomName =
-      name || (await this.generateRoomName(allParticipants, userUuid));
+      name || (await this.generateRoomName(allParticipants));
     const chatRoom = this.chatRoomRepository.create({
       roomUuid,
       type,

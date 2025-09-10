@@ -31,6 +31,7 @@ export interface PushResult {
 export class ApnsPushService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ApnsPushService.name);
   private apnProvider: apn.Provider;
+  private apnSandboxProvider: apn.Provider;
   private isInitialized = false;
 
   constructor(private configService: ConfigService) {}
@@ -45,8 +46,6 @@ export class ApnsPushService implements OnModuleInit, OnModuleDestroy {
       const keyPath = this.configService.get<string>('APNS_KEY_PATH');
       const keyId = this.configService.get<string>('APNS_KEY_ID');
       const teamId = this.configService.get<string>('APNS_TEAM_ID');
-      const isProduction =
-        this.configService.get<string>('NODE_ENV') === 'production';
 
       if (!keyPath || !keyId || !teamId) {
         const warningMessage =
@@ -65,26 +64,36 @@ export class ApnsPushService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      // APNs Provider 설정
-      const options: apn.ProviderOptions = {
+      // 기본 옵션
+      const baseOptions = {
         token: {
           key: fullKeyPath,
           keyId: keyId,
           teamId: teamId,
         },
-        production: isProduction,
-        // 연결 풀 설정
         connectionRetryLimit: 3,
       };
 
-      this.apnProvider = new apn.Provider(options);
-      this.setupEventListeners();
+      // Production Provider 설정
+      const productionOptions: apn.ProviderOptions = {
+        ...baseOptions,
+        production: true,
+      };
+
+      // Sandbox Provider 설정
+      const sandboxOptions: apn.ProviderOptions = {
+        ...baseOptions,
+        production: false,
+      };
+
+      this.apnProvider = new apn.Provider(productionOptions);
+      this.apnSandboxProvider = new apn.Provider(sandboxOptions);
+
+      this.setupEventListeners(this.apnProvider, 'Production');
+      this.setupEventListeners(this.apnSandboxProvider, 'Sandbox');
       this.isInitialized = true;
 
-      this.logger.log(`APNs Provider 초기화 완료`);
-      this.logger.log(
-        `환경: ${isProduction ? 'Production' : 'Sandbox (Development)'}`,
-      );
+      this.logger.log(`APNs Provider 초기화 완료 (Production & Sandbox)`);
       this.logger.log(`Key ID: ${keyId}`);
       this.logger.log(`Team ID: ${teamId}`);
     } catch (error) {
@@ -94,33 +103,32 @@ export class ApnsPushService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private setupEventListeners() {
-    if (!this.apnProvider) return;
+  private setupEventListeners(provider: apn.Provider, environment: string) {
+    if (!provider) return;
 
-    this.apnProvider.on('connected', () => {
-      this.logger.log('APNs 서버에 연결됨');
+    provider.on('connected', () => {
+      this.logger.log(`APNs 서버에 연결됨 (${environment})`);
     });
 
-    this.apnProvider.on('disconnected', () => {
-      this.logger.warn('APNs 서버 연결 해제됨');
+    provider.on('disconnected', () => {
+      this.logger.warn(`APNs 서버 연결 해제됨 (${environment})`);
     });
 
-    this.apnProvider.on('socketError', (err) => {
-      this.logger.error('APNs 소켓 에러:', err);
+    provider.on('socketError', (err) => {
+      this.logger.error(`APNs 소켓 에러 (${environment}):`, err);
     });
 
-    this.apnProvider.on('transmitted', (notification, device) => {
-      this.logger.debug(`푸시 전송 성공: ${device.substring(0, 8)}...`);
+    provider.on('transmitted', (notification, device) => {
+      this.logger.debug(
+        `푸시 전송 성공 (${environment}): ${device.substring(0, 8)}...`,
+      );
     });
 
-    this.apnProvider.on(
-      'transmissionError',
-      (errorCode, notification, device) => {
-        this.logger.error(
-          `푸시 전송 실패: ${device.substring(0, 8)}..., 에러: ${errorCode}`,
-        );
-      },
-    );
+    provider.on('transmissionError', (errorCode, notification, device) => {
+      this.logger.error(
+        `푸시 전송 실패 (${environment}): ${device.substring(0, 8)}..., 에러: ${errorCode}`,
+      );
+    });
   }
 
   /**
@@ -134,7 +142,7 @@ export class ApnsPushService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 여러 디바이스에 푸시 알림 전송
+   * 여러 디바이스에 푸시 알림 전송 (샌드박스 + 프로덕션 모두)
    */
   async sendToDevices(
     deviceTokens: string[],
@@ -158,50 +166,43 @@ export class ApnsPushService implements OnModuleInit, OnModuleDestroy {
       // 알림 객체 생성
       const notification = this.createNotification(payload);
 
-      // 푸시 전송
-      const result = await this.apnProvider.send(notification, deviceTokens);
+      // 프로덕션과 샌드박스 모두에 전송
+      const [productionResult, sandboxResult] = await Promise.all([
+        this.apnProvider.send(notification, deviceTokens),
+        this.apnSandboxProvider.send(notification, deviceTokens),
+      ]);
 
       // 결과 분석
       const invalidTokens: string[] = [];
       const errors: string[] = [];
+      let totalSent = 0;
+      let totalFailed = 0;
 
-      // 실패한 토큰들 분석
-      result.failed.forEach((failure) => {
-        const deviceToken = failure.device;
-        const status = failure.status;
-        const response = failure.response;
+      // 프로덕션 결과 분석
+      this.analyzeResults(
+        productionResult,
+        'Production',
+        invalidTokens,
+        errors,
+      );
+      totalSent += productionResult.sent.length;
+      totalFailed += productionResult.failed.length;
 
-        if (status === '410' || status === '400') {
-          // 잘못된 토큰 (삭제 필요)
-          invalidTokens.push(deviceToken);
-          this.logger.warn(
-            `잘못된 디바이스 토큰: ${deviceToken.substring(0, 8)}... (${status})`,
-          );
-        } else {
-          // 기타 오류
-          const errorMsg = `${deviceToken.substring(0, 8)}...: ${status} - ${response}`;
-          errors.push(errorMsg);
-          this.logger.error(`푸시 전송 실패: ${errorMsg}`);
-        }
-      });
-
-      // 성공한 토큰들 로그
-      result.sent.forEach((sentResult) => {
-        this.logger.debug(
-          `푸시 전송 성공: ${sentResult.device.substring(0, 8)}...`,
-        );
-      });
+      // 샌드박스 결과 분석
+      this.analyzeResults(sandboxResult, 'Sandbox', invalidTokens, errors);
+      totalSent += sandboxResult.sent.length;
+      totalFailed += sandboxResult.failed.length;
 
       const finalResult: PushResult = {
         success: true,
-        sent: result.sent.length,
-        failed: result.failed.length,
-        invalidTokens,
+        sent: totalSent,
+        failed: totalFailed,
+        invalidTokens: [...new Set(invalidTokens)], // 중복 제거
         errors: errors.length > 0 ? errors : undefined,
       };
 
       this.logger.log(
-        `푸시 전송 완료 - 성공: ${finalResult.sent}, 실패: ${finalResult.failed}, 잘못된 토큰: ${invalidTokens.length}`,
+        `푸시 전송 완료 (전체) - 성공: ${finalResult.sent}, 실패: ${finalResult.failed}, 잘못된 토큰: ${finalResult.invalidTokens.length}`,
       );
 
       return finalResult;
@@ -219,6 +220,49 @@ export class ApnsPushService implements OnModuleInit, OnModuleDestroy {
           error.message || '알 수 없는 오류',
         );
       }
+    }
+  }
+
+  /**
+   * 푸시 전송 결과 분석 헬퍼 메서드
+   */
+  private analyzeResults(
+    result: any,
+    environment: string,
+    invalidTokens: string[],
+    errors: string[],
+  ) {
+    // 실패한 토큰들 분석
+    result.failed.forEach((failure) => {
+      const deviceToken = failure.device;
+      const status = failure.status;
+      const response = failure.response;
+
+      if (status === '410' || status === '400') {
+        // 잘못된 토큰 (삭제 필요)
+        invalidTokens.push(deviceToken);
+        this.logger.warn(
+          `잘못된 디바이스 토큰 (${environment}): ${deviceToken.substring(0, 8)}... (${status})`,
+        );
+      } else {
+        // 기타 오류
+        const errorMsg = `${environment} - ${deviceToken.substring(0, 8)}...: ${status} - ${response}`;
+        errors.push(errorMsg);
+        this.logger.error(`푸시 전송 실패: ${errorMsg}`);
+      }
+    });
+
+    // 성공한 토큰들 로그
+    result.sent.forEach((sentResult) => {
+      this.logger.debug(
+        `푸시 전송 성공 (${environment}): ${sentResult.device.substring(0, 8)}...`,
+      );
+    });
+
+    if (result.sent.length > 0 || result.failed.length > 0) {
+      this.logger.log(
+        `푸시 전송 완료 (${environment}) - 성공: ${result.sent.length}, 실패: ${result.failed.length}`,
+      );
     }
   }
 
@@ -295,13 +339,29 @@ export class ApnsPushService implements OnModuleInit, OnModuleDestroy {
    * 모듈 종료 시 APNs 연결 해제
    */
   async onModuleDestroy() {
+    const shutdownPromises: Promise<void>[] = [];
+
     if (this.apnProvider) {
-      try {
-        await this.apnProvider.shutdown();
-        this.logger.log('APNs Provider 연결 해제 완료');
-      } catch (error) {
-        this.logger.error('APNs Provider 종료 중 오류:', error);
-      }
+      shutdownPromises.push(
+        Promise.resolve(this.apnProvider.shutdown()).catch((error: any) => {
+          this.logger.error('APNs Production Provider 종료 중 오류:', error);
+        }),
+      );
+    }
+
+    if (this.apnSandboxProvider) {
+      shutdownPromises.push(
+        Promise.resolve(this.apnSandboxProvider.shutdown()).catch(
+          (error: any) => {
+            this.logger.error('APNs Sandbox Provider 종료 중 오류:', error);
+          },
+        ),
+      );
+    }
+
+    if (shutdownPromises.length > 0) {
+      await Promise.all(shutdownPromises);
+      this.logger.log('APNs Provider 연결 해제 완료');
     }
   }
 }

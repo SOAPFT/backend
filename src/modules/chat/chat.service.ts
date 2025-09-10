@@ -199,8 +199,8 @@ export class ChatService {
 
     // 채팅방 생성
     const roomUuid = ulid();
-    const roomName =
-      name || (await this.generateRoomName(allParticipants));
+    // 1대1 채팅방의 경우 이름을 null로 설정하여 동적으로 표시
+    const roomName = type === ChatRoomType.DIRECT ? null : name || `그룹 채팅방`;
     const chatRoom = this.chatRoomRepository.create({
       roomUuid,
       type,
@@ -613,10 +613,19 @@ export class ChatService {
       chatRoom.type,
     );
 
+    // 1대1 채팅방의 경우 상대방 이름을 채팅방 이름으로 설정
+    let displayName = chatRoom.name;
+    if (chatRoom.type === ChatRoomType.DIRECT) {
+      const otherParticipant = participants.find(
+        (p) => p.userUuid !== currentUserUuid,
+      );
+      displayName = otherParticipant?.nickname || '알 수 없는 사용자';
+    }
+
     return {
       roomUuid: chatRoom.roomUuid,
       type: chatRoom.type,
-      name: chatRoom.name,
+      name: displayName,
       participants: participants.map((p) => ({
         userUuid: p.userUuid,
         nickname: p.nickname,

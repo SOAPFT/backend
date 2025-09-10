@@ -11,6 +11,7 @@ import { PostsModule } from '../posts/posts.module';
 import { ChatModule } from '../chat/chat.module';
 import { forwardRef } from '@nestjs/common';
 import { ChallengeService } from './challenge.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ChallengeService } from './challenge.service';
     forwardRef(() => UsersModule),
     forwardRef(() => PostsModule),
     forwardRef(() => ChatModule),
+    NotificationsModule,
   ],
   controllers: [ChallengeController],
   providers: [ChallengeService],

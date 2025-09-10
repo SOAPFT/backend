@@ -9,6 +9,7 @@ import { ChatMessage } from '@/entities/chat-message.entity';
 import { User } from '@/entities/user.entity';
 import { Friendship } from '@/entities/friendship.entity';
 import { Challenge } from '@/entities/challenge.entity';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { Challenge } from '@/entities/challenge.entity';
       secret: 'tbfpemghkdlxld5837',
       signOptions: { expiresIn: '24h' },
     }),
+    NotificationsModule,
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],

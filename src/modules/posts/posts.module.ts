@@ -47,6 +47,6 @@ import { ChatbotModule } from '../chatbot/chatbot.module';
   ],
   controllers: [PostsController],
   providers: [PostsService],
-  exports: [PostsService],
+  exports: [PostsService, TypeOrmModule],
 })
 export class PostsModule {}

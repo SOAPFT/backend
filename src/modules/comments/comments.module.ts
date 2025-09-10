@@ -7,12 +7,14 @@ import { Comment } from '@/entities/comment.entity';
 import { User } from '@/entities/user.entity';
 import { Post } from '@/entities/post.entity';
 import { UsersModule } from '../users/users.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([Comment, User, Post]),
     forwardRef(() => PostsModule),
     forwardRef(() => UsersModule),
-    forwardRef(() => PostsModule),
+    NotificationsModule,
   ],
   controllers: [CommentsController],
   providers: [CommentsService],

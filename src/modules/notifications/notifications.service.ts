@@ -157,16 +157,12 @@ export class NotificationsService {
     try {
       const userUuids = notifications.map((n) => n.recipientUuid);
 
-      // 각 사용자의 미읽음 개수 조회는 생략하고 기본값 사용
-      // (성능을 위해 - 필요시 개별 조회 로직 추가 가능)
-
       const result = await this.userPushService.sendPushToUsers(userUuids, {
-        title: notifications[0].title, // 동일한 제목이라 가정
-        body: notifications[0].content, // 동일한 내용이라 가정
+        title: notifications[0].title,
+        body: notifications[0].content,
         badge: 1, // 기본 배지값
         data: {
           type: notifications[0].type,
-          // 개별 데이터는 생략 (대량 발송시)
         },
       });
 

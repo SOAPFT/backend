@@ -229,39 +229,6 @@ export class NotificationSeed implements Seeder {
         isRead: false,
         isSent: true,
       },
-      // 멘션 알림들
-      {
-        recipientUuid: users[1].userUuid,
-        senderUuid: users[0].userUuid,
-        type: NotificationType.MENTION,
-        title: '멘션',
-        content: `${users[0].nickname}님이 회원님을 언급했습니다.`,
-        data: {
-          postId: posts[0].postUuid,
-          postTitle: '오늘의 운동 성공!',
-          mentionerId: users[0].userUuid,
-          mentionerNickname: users[0].nickname,
-          commentPreview: `@${users[1].nickname} 함께 운동해요! 같이 하면 더 재미있을 것 같아요`,
-        },
-        isRead: true,
-        isSent: true,
-      },
-      {
-        recipientUuid: users[5].userUuid,
-        senderUuid: users[2].userUuid,
-        type: NotificationType.MENTION,
-        title: '멘션',
-        content: `${users[2].nickname}님이 회원님을 언급했습니다.`,
-        data: {
-          postId: posts[2].postUuid,
-          postTitle: '홈트레이닝 완성!',
-          mentionerId: users[2].userUuid,
-          mentionerNickname: users[2].nickname,
-          commentPreview: `@${users[5].nickname} 유튜브 영상 링크 공유해드릴게요! 정말 따라하기 쉬워요`,
-        },
-        isRead: false,
-        isSent: true,
-      },
       // 챌린지 종료 알림
       {
         recipientUuid: users[7].userUuid,

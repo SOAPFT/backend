@@ -7,6 +7,7 @@ import { ErrorCode } from '@/types/error-code.enum';
 import { CustomException } from '@/utils/custom-exception';
 import { FriendshipStatus } from '@/types/friendship.enum';
 import { User } from '@/entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class FriendshipService {
@@ -15,6 +16,7 @@ export class FriendshipService {
     private readonly friendshipRepository: Repository<Friendship>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -58,6 +60,24 @@ export class FriendshipService {
 
     await this.friendshipRepository.save(friendRequest);
 
+    // 친구 요청 알림 발송
+    try {
+      const requester = await this.userRepository.findOne({
+        where: { userUuid: requesterUuid },
+        select: ['nickname'],
+      });
+
+      if (requester) {
+        await this.notificationsService.createFriendRequestNotification(
+          addresseeUuid,
+          requesterUuid,
+          requester.nickname,
+        );
+      }
+    } catch (error) {
+      console.error('친구 요청 알림 발송 실패:', error);
+    }
+
     return { message: '친구 요청이 전송되었습니다.' };
   }
 
@@ -81,6 +101,24 @@ export class FriendshipService {
 
     request.status = FriendshipStatus.ACCEPTED;
     await this.friendshipRepository.save(request);
+
+    // 친구 수락 알림 발송 (요청자에게)
+    try {
+      const accepter = await this.userRepository.findOne({
+        where: { userUuid: userUuid },
+        select: ['nickname'],
+      });
+
+      if (accepter) {
+        await this.notificationsService.createFriendAcceptedNotification(
+          request.requesterUuid,
+          userUuid,
+          accepter.nickname,
+        );
+      }
+    } catch (error) {
+      console.error('친구 수락 알림 발송 실패:', error);
+    }
 
     return { message: '친구 요청을 수락했습니다.' };
   }

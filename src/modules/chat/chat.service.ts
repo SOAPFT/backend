@@ -20,6 +20,7 @@ import { GetChatRoomsDto } from './dto/get-chat-rooms.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
 import { ChatRoomType, MessageType } from '@/types/chat.enum';
 import { FriendshipStatus } from '@/types/friendship.enum';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ChatService {
@@ -36,6 +37,7 @@ export class ChatService {
     private readonly challengeRepository: Repository<Challenge>,
     @Inject('winston')
     private readonly logger: Logger,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -311,6 +313,35 @@ export class ChatService {
       { roomUuid },
       { lastMessageAt: savedMessage.createdAt },
     );
+
+    // 메시지 알림 발송 (발신자 제외한 다른 참여자들에게)
+    try {
+      const otherParticipants = chatRoom.participantUuids.filter(
+        (uuid) => uuid !== userUuid,
+      );
+
+      if (otherParticipants.length > 0) {
+        const sender = await this.userRepository.findOne({
+          where: { userUuid },
+          select: ['nickname'],
+        });
+
+        if (sender) {
+          // 그룹 채팅방인 경우 모든 참여자에게, 1대1 채팅방인 경우 상대방에게만 알림
+          for (const recipientUuid of otherParticipants) {
+            await this.notificationsService.createNewMessageNotification(
+              recipientUuid,
+              userUuid,
+              sender.nickname,
+              roomUuid,
+              content.length > 50 ? content.substring(0, 50) + '...' : content,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error('메시지 알림 발송 실패:', error);
+    }
 
     this.logger.info('메시지 전송 완료', {
       messageId: savedMessage.id,

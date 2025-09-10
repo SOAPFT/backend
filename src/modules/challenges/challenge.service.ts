@@ -8,6 +8,7 @@ import { FindAllChallengesDto } from './dto/find-all-challenges.dto';
 import { User } from '@/entities/user.entity';
 import { Post } from '@/entities/post.entity';
 import { ChatService } from '../chat/chat.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ulid } from 'ulid';
 import {
   ChallengeType,
@@ -56,6 +57,7 @@ export class ChallengeService {
     @InjectRepository(Mission)
     private missionRepository: Repository<Mission>,
     private chatService: ChatService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -831,6 +833,22 @@ export class ChallengeService {
     for (const challenge of startingChallenges) {
       challenge.isStarted = true;
       await this.challengeRepository.save(challenge);
+
+      // 참여자들에게 챌린지 시작 알림 발송
+      if (challenge.participantUuid && challenge.participantUuid.length > 0) {
+        try {
+          await this.notificationsService.createChallengeStartNotification(
+            challenge.participantUuid,
+            challenge.title,
+            challenge.challengeUuid,
+          );
+        } catch (error) {
+          console.error(
+            `챌린지 시작 알림 발송 실패: ${challenge.challengeUuid}`,
+            error,
+          );
+        }
+      }
     }
 
     console.log(
@@ -890,6 +908,41 @@ export class ChallengeService {
       challenge.isFinished = true;
 
       await this.challengeRepository.save(challenge);
+
+      // 참여자들에게 챌린지 종료 알림 발송
+      if (challenge.participantUuid && challenge.participantUuid.length > 0) {
+        try {
+          // 성공자와 실패자 분리
+          const failedParticipants = challenge.participantUuid.filter(
+            (uuid) => !successParticipants.includes(uuid),
+          );
+
+          // 성공자들에게 성공 알림
+          if (successParticipants.length > 0) {
+            await this.notificationsService.createChallengeEndNotification(
+              successParticipants,
+              challenge.title,
+              challenge.challengeUuid,
+              true, // 성공
+            );
+          }
+
+          // 실패자들에게 실패 알림
+          if (failedParticipants.length > 0) {
+            await this.notificationsService.createChallengeEndNotification(
+              failedParticipants,
+              challenge.title,
+              challenge.challengeUuid,
+              false, // 실패
+            );
+          }
+        } catch (error) {
+          console.error(
+            `챌린지 종료 알림 발송 실패: ${challenge.challengeUuid}`,
+            error,
+          );
+        }
+      }
     }
 
     console.log(

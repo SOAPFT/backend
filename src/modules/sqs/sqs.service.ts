@@ -16,7 +16,8 @@ export class SqsService {
       },
     });
 
-    this.queueUrl = process.env.SQS_QUEUE_URL || 
+    this.queueUrl =
+      process.env.SQS_QUEUE_URL ||
       'https://sqs.ap-northeast-2.amazonaws.com/305601180063/soapft-image-verification';
   }
 
@@ -48,7 +49,7 @@ export class SqsService {
       });
 
       const response = await this.sqsClient.send(command);
-      
+
       this.logger.log(
         `SQS 메시지 전송 성공 - MessageId: ${response.MessageId}, VerificationId: ${payload.verificationId}`,
       );

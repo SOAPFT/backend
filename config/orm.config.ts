@@ -6,11 +6,6 @@ import { config } from 'dotenv';
 const nodeEnv = process.env.NODE_ENV || 'development';
 config({ path: `env/.${nodeEnv}.env` });
 
-// 환경별 경로 설정
-const isProd = process.env.NODE_ENV === 'production';
-const isDev = process.env.NODE_ENV === 'development';
-
-// NestJS에서 사용되는 설정
 export const typeOrmConfig = (configService: ConfigService): any => {
   return {
     type: 'postgres',
@@ -41,8 +36,5 @@ export const dataSourceOptions: DataSourceOptions = {
   ssl: { rejectUnauthorized: false },
 };
 
-// TypeORM CLI를 위한 DataSource 인스턴스
 export const AppDataSource = new DataSource(dataSourceOptions);
-
-// 기존 호환성을 위한 내보내기
 export default typeOrmConfig;
